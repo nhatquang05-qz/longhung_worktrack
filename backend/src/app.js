@@ -11,8 +11,17 @@ import { errorHandler } from './middleware/errorHandler.js';
 
 const app = express();
 
+const allowedOrigin = ENV.CLIENT_URL ? ENV.CLIENT_URL.trim() : '*';
+
 app.use(cors({
-  origin: ENV.CLIENT_URL || '*',
+  origin: (origin, callback) => {
+    // Cho phép các công cụ không gửi origin (như curl/postman) hoặc trùng khớp với allowedOrigin
+    if (!origin || allowedOrigin === '*' || origin === allowedOrigin) {
+      callback(null, true);
+    } else {
+      callback(new Error('Chặn bởi CORS Policy'));
+    }
+  },
   credentials: true,
 }));
 
