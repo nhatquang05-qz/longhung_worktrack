@@ -12,13 +12,31 @@ import { errorHandler } from './middleware/errorHandler.js';
 const app = express();
 
 app.use(cors({
-  origin: ENV.CLIENT_URL,
+  origin: ENV.CLIENT_URL || '*',
   credentials: true,
 }));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Endpoint root phục vụ kiểm tra nhanh domain chính
+app.get('/', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: 'Long Hưng WorkTrack API is running',
+    timestamp: new Date().toISOString(),
+  });
+});
+
+// Middleware chuẩn hóa URL: đảm bảo luôn có tiền tố /api khi định tuyến trong Express
+app.use((req, res, next) => {
+  if (req.url !== '/' && !req.url.startsWith('/api')) {
+    req.url = `/api${req.url}`;
+  }
+  next();
+});
+
+// Đăng ký các routes chính thức
 app.use('/api', healthRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
@@ -26,6 +44,7 @@ app.use('/api/tasks', taskRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/notifications', notificationRoutes);
 
+// Bắt các route không tồn tại
 app.use('*', (req, res) => {
   res.status(404).json({
     success: false,
