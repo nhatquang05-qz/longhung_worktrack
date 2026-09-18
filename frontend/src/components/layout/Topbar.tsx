@@ -150,7 +150,7 @@ const Topbar: React.FC<TopbarProps> = ({ onMenuToggle }) => {
             <Bell size={20} />
             {notifications.length > 0 && (
               <span
-                className={`absolute top-1.5 right-1.5 min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white flex items-center justify-center animate-pulse ${
+                className={`absolute top-1.5 right-1.5 min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white flex items-center justify-center ${
                   hasOverdue ? 'bg-rose-600' : 'bg-amber-500'
                 }`}
               >

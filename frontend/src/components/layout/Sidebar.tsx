@@ -2,6 +2,7 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { LayoutDashboard, CheckSquare, ListTodo, Users, Bell, X, LucideIcon } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import logoLongHung from '../../assets/images/logo_longhung.png';
 
 interface NavItem {
   to: string;
@@ -30,10 +31,17 @@ const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onCloseMobile }) => {
 
   const sidebarContent = (
     <div className="w-64 h-full border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col shrink-0">
-      <div className="h-16 px-6 flex items-center justify-between border-b border-slate-200 dark:border-slate-800">
-        <h1 className="text-lg font-bold tracking-tight text-blue-600 dark:text-blue-400">
-          WorkTrack
-        </h1>
+      <div className="h-16 px-5 flex items-center justify-between border-b border-slate-200 dark:border-slate-800">
+        <div className="flex items-center space-x-2.5 overflow-hidden">
+          <img
+            src={logoLongHung}
+            alt="Long Hưng Logo"
+            className="w-8 h-8 rounded-lg object-contain shrink-0"
+          />
+          <span className="text-base font-bold tracking-tight text-slate-900 dark:text-slate-100 truncate">
+            Long Hưng WorkTrack
+          </span>
+        </div>
         {onCloseMobile && (
           <button
             onClick={onCloseMobile}
@@ -75,12 +83,10 @@ const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onCloseMobile }) => {
 
   return (
     <>
-      {/* Desktop Sidebar */}
       <aside className="hidden md:flex h-screen sticky top-0 shrink-0">
         {sidebarContent}
       </aside>
 
-      {/* Mobile Drawer Backdrop */}
       {mobileOpen && (
         <div className="fixed inset-0 z-50 md:hidden flex">
           <div

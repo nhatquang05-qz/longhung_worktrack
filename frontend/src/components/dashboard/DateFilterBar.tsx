@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { Search, Calendar, Filter } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Search, Calendar } from 'lucide-react';
 import { ManagedUser } from '../../types/user';
-import { DatePreset, calculatePresetDates } from '../../utils/filterUtils';
+import { DatePreset } from '../../utils/filterUtils';
 import api from '../../services/api';
 import { ApiResponse } from '../../types/api';
 
@@ -20,6 +20,64 @@ interface DateFilterBarProps {
   onChange: (newFilters: TaskFilterParams) => void;
   showAssigneeFilter?: boolean;
 }
+
+// Component Date Input hiển thị bắt buộc định dạng dd/mm/yyyy
+const VietDateInput: React.FC<{
+  value: string;
+  onChange: (val: string) => void;
+  label: string;
+}> = ({ value, onChange, label }) => {
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const formatDisplay = (isoDate: string) => {
+    if (!isoDate) return 'dd/mm/yyyy';
+    const parts = isoDate.split('-');
+    if (parts.length === 3) {
+      return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+    return isoDate;
+  };
+
+  const handleContainerClick = () => {
+    if (inputRef.current) {
+      if (typeof inputRef.current.showPicker === 'function') {
+        inputRef.current.showPicker();
+      } else {
+        inputRef.current.focus();
+      }
+    }
+  };
+
+  return (
+    <div className="flex items-center space-x-2">
+      <span className="text-slate-500 font-medium shrink-0">{label}</span>
+      <div
+        onClick={handleContainerClick}
+        className="relative flex items-center px-2.5 py-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-md cursor-pointer hover:border-blue-400 dark:hover:border-blue-500 transition text-xs"
+      >
+        <span
+          className={`font-mono ${
+            value
+              ? 'text-slate-800 dark:text-slate-100 font-medium'
+              : 'text-slate-400 dark:text-slate-500'
+          }`}
+        >
+          {formatDisplay(value)}
+        </span>
+        <Calendar size={13} className="ml-2 text-slate-400 shrink-0" />
+
+        <input
+          ref={inputRef}
+          type="date"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="absolute inset-0 opacity-0 pointer-events-none w-full h-full"
+          tabIndex={-1}
+        />
+      </div>
+    </div>
+  );
+};
 
 export const DateFilterBar: React.FC<DateFilterBarProps> = ({
   filters,
@@ -90,27 +148,19 @@ export const DateFilterBar: React.FC<DateFilterBarProps> = ({
         </div>
       </div>
 
-      {/* Hàng 2 (Tùy chọn): Custom Start/End Date nếu chọn Khoảng ngày */}
+      {/* Hàng 2: Hiển thị khoảng ngày với định dạng dd/mm/yyyy */}
       {filters.preset === 'CUSTOM' && (
-        <div className="flex flex-wrap items-center gap-3 p-2.5 bg-slate-50 dark:bg-slate-800/50 rounded-lg text-xs border border-slate-200 dark:border-slate-700">
-          <div className="flex items-center space-x-2">
-            <span className="text-slate-500 font-medium">Từ ngày:</span>
-            <input
-              type="date"
-              value={filters.customStart}
-              onChange={(e) => update({ customStart: e.target.value })}
-              className="px-2 py-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded text-xs focus:outline-none dark:text-slate-100"
-            />
-          </div>
-          <div className="flex items-center space-x-2">
-            <span className="text-slate-500 font-medium">Đến ngày:</span>
-            <input
-              type="date"
-              value={filters.customEnd}
-              onChange={(e) => update({ customEnd: e.target.value })}
-              className="px-2 py-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded text-xs focus:outline-none dark:text-slate-100"
-            />
-          </div>
+        <div className="flex flex-wrap items-center gap-4 p-2.5 bg-slate-50 dark:bg-slate-800/50 rounded-lg text-xs border border-slate-200 dark:border-slate-700 animate-in fade-in duration-150">
+          <VietDateInput
+            label="Từ ngày:"
+            value={filters.customStart}
+            onChange={(val) => update({ customStart: val })}
+          />
+          <VietDateInput
+            label="Đến ngày:"
+            value={filters.customEnd}
+            onChange={(val) => update({ customEnd: val })}
+          />
         </div>
       )}
 

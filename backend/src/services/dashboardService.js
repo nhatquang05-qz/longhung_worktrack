@@ -1,18 +1,54 @@
 import { query } from '../config/db.js';
 
-export const getDashboardStats = async (userId = null) => {
-  let userCondition = '';
+export const getDashboardStats = async (filters = {}, userId = null) => {
+  const { search, assigneeId, startDate, endDate, timeField } = filters;
+  const safeTimeField = timeField === 'start_time' ? 'start_time' : 'end_time';
+
+  const whereClauses = ['1=1'];
   const params = [];
 
+  // 1. Phân quyền cá nhân (scope=my) hoặc lọc theo thành viên cụ thể
   if (userId) {
-    userCondition = `
-      AND EXISTS (
-        SELECT 1 FROM task_assignees ta 
-        WHERE ta.task_id = t.id AND ta.user_id = ?
-      )
-    `;
+    whereClauses.push(`EXISTS (
+      SELECT 1 FROM task_assignees ta 
+      WHERE ta.task_id = t.id AND ta.user_id = ?
+    )`);
     params.push(userId);
+  } else if (assigneeId) {
+    whereClauses.push(`EXISTS (
+      SELECT 1 FROM task_assignees ta 
+      WHERE ta.task_id = t.id AND ta.user_id = ?
+    )`);
+    params.push(assigneeId);
   }
+
+  // 2. Lọc theo mốc thời gian (bắt đầu hoặc kết thúc)
+  if (startDate) {
+    whereClauses.push(`t.${safeTimeField} >= ?`);
+    params.push(startDate);
+  }
+
+  if (endDate) {
+    whereClauses.push(`t.${safeTimeField} <= ?`);
+    params.push(endDate);
+  }
+
+  // 3. Lọc theo từ khóa tìm kiếm nếu có
+  if (search && search.trim()) {
+    whereClauses.push(`(
+      t.title LIKE ? 
+      OR t.submitter_name LIKE ? 
+      OR EXISTS (
+        SELECT 1 FROM task_assignees ta_s 
+        LEFT JOIN users u_s ON ta_s.user_id = u_s.id 
+        WHERE ta_s.task_id = t.id AND (u_s.full_name LIKE ? OR ta_s.other_assignee_name LIKE ?)
+      )
+    )`);
+    const searchParam = `%${search.trim()}%`;
+    params.push(searchParam, searchParam, searchParam, searchParam);
+  }
+
+  const whereSQL = `WHERE ${whereClauses.join(' AND ')}`;
 
   const sql = `
     SELECT
@@ -36,7 +72,7 @@ export const getDashboardStats = async (userId = null) => {
         END
       ) AS overdue_count
     FROM tasks t
-    WHERE 1=1 ${userCondition}
+    ${whereSQL}
   `;
 
   const rows = await query(sql, params);

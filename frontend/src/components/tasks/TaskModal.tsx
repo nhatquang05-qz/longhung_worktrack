@@ -19,6 +19,8 @@ interface LocalAssignee {
   isAccount: boolean;
 }
 
+const DEFAULT_FORMATS = ['Trực tiếp', 'Online', 'Email', 'Văn bản'];
+
 export const TaskModal: React.FC<TaskModalProps> = ({
   isOpen,
   taskToEdit,
@@ -29,7 +31,11 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
   const [status, setStatus] = useState<TaskStatus>('TODO');
-  const [format, setFormat] = useState('Trực tiếp');
+  
+  // State quản lý hình thức
+  const [selectedFormat, setSelectedFormat] = useState('Trực tiếp');
+  const [customFormat, setCustomFormat] = useState('');
+
   const [driveUrl, setDriveUrl] = useState('');
   const [notes, setNotes] = useState('');
   const [submitterName, setSubmitterName] = useState('');
@@ -66,7 +72,17 @@ export const TaskModal: React.FC<TaskModalProps> = ({
       setStartTime(toInputDateTime(taskToEdit.startTime));
       setEndTime(toInputDateTime(taskToEdit.endTime));
       setStatus(taskToEdit.status);
-      setFormat(taskToEdit.format || 'Trực tiếp');
+
+      // Xử lý hình thức khi sửa task
+      const currentFmt = taskToEdit.format || 'Trực tiếp';
+      if (DEFAULT_FORMATS.includes(currentFmt)) {
+        setSelectedFormat(currentFmt);
+        setCustomFormat('');
+      } else {
+        setSelectedFormat('__CUSTOM__');
+        setCustomFormat(currentFmt);
+      }
+
       setDriveUrl(taskToEdit.driveUrl || '');
       setNotes(taskToEdit.notes || '');
       setSubmitterName(taskToEdit.submitterName || '');
@@ -84,10 +100,11 @@ export const TaskModal: React.FC<TaskModalProps> = ({
       setStartTime(toInputDateTime(now.toISOString()));
       setEndTime(toInputDateTime(nextWeek.toISOString()));
       setStatus('TODO');
-      setFormat('Trực tiếp');
+      setSelectedFormat('Trực tiếp');
+      setCustomFormat('');
       setDriveUrl('');
       setNotes('');
-      setSubmitterName(''); // Mặc định để trống lúc tạo
+      setSubmitterName('');
       setAssignees([]);
     }
     setError('');
@@ -137,6 +154,12 @@ export const TaskModal: React.FC<TaskModalProps> = ({
     }
   };
 
+  const formatLocalInputToSql = (val: string): string => {
+    if (!val) return '';
+    const clean = val.replace('T', ' ');
+    return clean.length === 16 ? `${clean}:00` : clean;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -151,17 +174,28 @@ export const TaskModal: React.FC<TaskModalProps> = ({
       return;
     }
 
+    // Xác định giá trị hình thức cuối cùng
+    let finalFormat = selectedFormat;
+    if (selectedFormat === '__CUSTOM__') {
+      const cleanCustom = customFormat.trim();
+      if (!cleanCustom) {
+        setError('Vui lòng nhập hình thức thực hiện');
+        return;
+      }
+      finalFormat = cleanCustom;
+    }
+
     setLoading(true);
 
     const payload: TaskPayload = {
       title: title.trim(),
-      startTime: new Date(startTime).toISOString().slice(0, 19).replace('T', ' '),
-      endTime: new Date(endTime).toISOString().slice(0, 19).replace('T', ' '),
+      startTime: formatLocalInputToSql(startTime),
+      endTime: formatLocalInputToSql(endTime),
       status,
-      format,
+      format: finalFormat,
       driveUrl: driveUrl.trim() ? driveUrl.trim() : null,
       notes: notes.trim() ? notes.trim() : null,
-      submitterName: submitterName ? submitterName : null as any,
+      submitterName: submitterName ? submitterName : (null as any),
       assignees: assignees.map((a) => ({
         userId: a.userId || null,
         otherName: a.userId ? null : a.name,
@@ -210,7 +244,6 @@ export const TaskModal: React.FC<TaskModalProps> = ({
             </div>
           )}
 
-          {/* Tiêu đề */}
           <div className="space-y-1.5">
             <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
               Nội dung công việc <span className="text-red-500">*</span>
@@ -225,7 +258,6 @@ export const TaskModal: React.FC<TaskModalProps> = ({
             />
           </div>
 
-          {/* Bộ phận thực hiện */}
           <div className="space-y-2">
             <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
               Bộ phận thực hiện (Assignees) <span className="text-red-500">*</span>
@@ -312,7 +344,6 @@ export const TaskModal: React.FC<TaskModalProps> = ({
             </div>
           </div>
 
-          {/* Người nộp (Không bắt buộc khi tạo) */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
               <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
@@ -334,7 +365,6 @@ export const TaskModal: React.FC<TaskModalProps> = ({
             </select>
           </div>
 
-          {/* Thời gian */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
@@ -378,24 +408,41 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 <option value="COMPLETED">Đã hoàn thành</option>
               </select>
             </div>
+
+            {/* Hình thức thực hiện (Có tùy chọn nhập khác) */}
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                 Hình thức thực hiện
               </label>
               <select
-                value={format}
-                onChange={(e) => setFormat(e.target.value)}
+                value={selectedFormat}
+                onChange={(e) => setSelectedFormat(e.target.value)}
                 className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-slate-100"
               >
-                <option value="Trực tiếp">Trực tiếp</option>
-                <option value="Online">Online</option>
-                <option value="Email">Email</option>
-                <option value="Văn bản">Văn bản</option>
+                {DEFAULT_FORMATS.map((f) => (
+                  <option key={f} value={f}>
+                    {f}
+                  </option>
+                ))}
+                <option value="__CUSTOM__">✏️ Khác (Tự nhập...)</option>
               </select>
+
+              {/* Ô input xuất hiện khi chọn Khác */}
+              {selectedFormat === '__CUSTOM__' && (
+                <div className="pt-1 animate-in fade-in duration-150">
+                  <input
+                    type="text"
+                    required
+                    value={customFormat}
+                    onChange={(e) => setCustomFormat(e.target.value)}
+                    placeholder="Nhập hình thức cụ thể (ví dụ: Zalo, Họp giao ban, SMS...)"
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800/80 border border-blue-400 dark:border-blue-500 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-slate-100"
+                  />
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Văn bản đính kèm Google Drive */}
           <div className="space-y-1.5">
             <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
               Văn bản đính kèm (Google Drive URL)
@@ -409,7 +456,6 @@ export const TaskModal: React.FC<TaskModalProps> = ({
             />
           </div>
 
-          {/* Ghi chú */}
           <div className="space-y-1.5">
             <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
               Ghi chú thêm
@@ -423,7 +469,6 @@ export const TaskModal: React.FC<TaskModalProps> = ({
             />
           </div>
 
-          {/* Footer nút bấm */}
           <div className="flex items-center justify-end space-x-3 pt-4 border-t border-slate-200 dark:border-slate-800">
             <button
               type="button"

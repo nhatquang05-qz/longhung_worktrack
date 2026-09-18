@@ -3,12 +3,15 @@ import { Plus } from 'lucide-react';
 import api from '../services/api';
 import { DashboardStats } from '../types/dashboard';
 import { TaskItem, TaskPagination } from '../types/task';
+import { TaskActivity } from '../types/activity';
 import { DashboardHeroStats } from '../components/dashboard/DashboardHeroStats';
 import { TaskTable } from '../components/tasks/TaskTable';
 import { TaskModal } from '../components/tasks/TaskModal';
 import { TaskDetailModal } from '../components/tasks/TaskDetailModal';
 import { DeleteConfirmModal } from '../components/tasks/DeleteConfirmModal';
 import { DateFilterBar, TaskFilterParams } from '../components/dashboard/DateFilterBar';
+import { ActivityLogCard } from '../components/dashboard/ActivityLogCard';
+import { ActivityDiffModal } from '../components/dashboard/ActivityDiffModal';
 import { calculatePresetDates } from '../utils/filterUtils';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -34,6 +37,12 @@ const HomePage: React.FC = () => {
   });
 
   const [tasks, setTasks] = useState<TaskItem[]>([]);
+  const [activities, setActivities] = useState<TaskActivity[]>([]);
+  const [activityLoading, setActivityLoading] = useState(false);
+
+  // State xem đối chiếu lịch sử
+  const [selectedActivity, setSelectedActivity] = useState<TaskActivity | null>(null);
+
   const [pagination, setPagination] = useState<TaskPagination>({
     page: 1,
     limit: 10,
@@ -49,9 +58,36 @@ const HomePage: React.FC = () => {
   const [detailTask, setDetailTask] = useState<TaskItem | null>(null);
   const [deletingTask, setDeletingTask] = useState<TaskItem | null>(null);
 
-  const fetchStats = async () => {
+  const getDateParams = useCallback(() => {
+    let startDate: string | undefined;
+    let endDate: string | undefined;
+
+    if (filters.preset === 'CUSTOM') {
+      if (filters.customStart) startDate = `${filters.customStart} 00:00:00`;
+      if (filters.customEnd) endDate = `${filters.customEnd} 23:59:59`;
+    } else if (filters.preset !== 'ALL') {
+      const dates = calculatePresetDates(filters.preset);
+      startDate = dates.startDate;
+      endDate = dates.endDate;
+    }
+
+    return { startDate, endDate };
+  }, [filters.preset, filters.customStart, filters.customEnd]);
+
+  const fetchStats = useCallback(async () => {
     try {
-      const res = (await api.get('/dashboard/stats')) as unknown as {
+      const params = new URLSearchParams({
+        timeField: filters.timeField,
+      });
+
+      if (filters.search.trim()) params.append('search', filters.search.trim());
+      if (filters.assigneeId) params.append('assigneeId', filters.assigneeId);
+
+      const { startDate, endDate } = getDateParams();
+      if (startDate) params.append('startDate', startDate);
+      if (endDate) params.append('endDate', endDate);
+
+      const res = (await api.get(`/dashboard/stats?${params.toString()}`)) as unknown as {
         success: boolean;
         data: DashboardStats;
       };
@@ -61,7 +97,33 @@ const HomePage: React.FC = () => {
     } catch (err) {
       console.error('Không thể lấy thống kê Dashboard', err);
     }
-  };
+  }, [filters.timeField, filters.search, filters.assigneeId, getDateParams]);
+
+  const fetchActivities = useCallback(async () => {
+    setActivityLoading(true);
+    try {
+      const params = new URLSearchParams({ limit: '20' });
+
+      if (filters.search.trim()) params.append('search', filters.search.trim());
+      if (filters.assigneeId) params.append('assigneeId', filters.assigneeId);
+
+      const { startDate, endDate } = getDateParams();
+      if (startDate) params.append('startDate', startDate);
+      if (endDate) params.append('endDate', endDate);
+
+      const res = (await api.get(`/dashboard/activities?${params.toString()}`)) as unknown as {
+        success: boolean;
+        data: TaskActivity[];
+      };
+      if (res.success && res.data) {
+        setActivities(res.data);
+      }
+    } catch (err) {
+      console.error('Không thể lấy lịch sử hoạt động', err);
+    } finally {
+      setActivityLoading(false);
+    }
+  }, [filters.search, filters.assigneeId, getDateParams]);
 
   const fetchTasks = useCallback(async () => {
     setLoading(true);
@@ -76,14 +138,9 @@ const HomePage: React.FC = () => {
       if (filters.status) params.append('status', filters.status);
       if (filters.assigneeId) params.append('assigneeId', filters.assigneeId);
 
-      if (filters.preset === 'CUSTOM') {
-        if (filters.customStart) params.append('startDate', `${filters.customStart} 00:00:00`);
-        if (filters.customEnd) params.append('endDate', `${filters.customEnd} 23:59:59`);
-      } else if (filters.preset !== 'ALL') {
-        const { startDate, endDate } = calculatePresetDates(filters.preset);
-        if (startDate) params.append('startDate', startDate);
-        if (endDate) params.append('endDate', endDate);
-      }
+      const { startDate, endDate } = getDateParams();
+      if (startDate) params.append('startDate', startDate);
+      if (endDate) params.append('endDate', endDate);
 
       const res = (await api.get(`/tasks?${params.toString()}`)) as unknown as {
         success: boolean;
@@ -100,24 +157,24 @@ const HomePage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [pagination.page, pagination.limit, filters]);
+  }, [pagination.page, pagination.limit, filters.timeField, filters.search, filters.status, filters.assigneeId, getDateParams]);
 
   useEffect(() => {
     fetchStats();
-  }, []);
-
-  useEffect(() => {
     fetchTasks();
-  }, [fetchTasks]);
+    fetchActivities();
+  }, [fetchStats, fetchTasks, fetchActivities]);
 
   const handleTaskSaved = () => {
     fetchStats();
     fetchTasks();
+    fetchActivities();
   };
 
   const handleTaskDeleted = () => {
     fetchStats();
     fetchTasks();
+    fetchActivities();
   };
 
   const canEditDetailTask = Boolean(
@@ -148,10 +205,8 @@ const HomePage: React.FC = () => {
         </button>
       </div>
 
-      {/* Cụm thống kê Hero Layout mới */}
       <DashboardHeroStats stats={stats} />
 
-      {/* Bộ lọc nâng cao */}
       <DateFilterBar
         filters={filters}
         onChange={(newFilters) => {
@@ -161,7 +216,6 @@ const HomePage: React.FC = () => {
         showAssigneeFilter={true}
       />
 
-      {/* Bảng công việc */}
       <div className="space-y-2">
         <div className="flex items-center justify-between px-1">
           <h3 className="font-semibold text-slate-800 dark:text-slate-200 text-base">
@@ -185,6 +239,19 @@ const HomePage: React.FC = () => {
           onDelete={(task) => setDeletingTask(task)}
         />
       </div>
+
+      {/* Nhật ký thao tác (click để mở modal đối chiếu) */}
+      <ActivityLogCard
+        activities={activities}
+        loading={activityLoading}
+        onSelectActivity={(act) => setSelectedActivity(act)}
+      />
+
+      {/* Modal Đối chiếu Hàng gốc vs Hàng mới */}
+      <ActivityDiffModal
+        activity={selectedActivity}
+        onClose={() => setSelectedActivity(null)}
+      />
 
       <TaskDetailModal
         task={detailTask}

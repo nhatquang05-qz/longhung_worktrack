@@ -7,6 +7,7 @@ import { TaskModal } from '../components/tasks/TaskModal';
 import { TaskDetailModal } from '../components/tasks/TaskDetailModal';
 import { DeleteConfirmModal } from '../components/tasks/DeleteConfirmModal';
 import { DateFilterBar, TaskFilterParams } from '../components/dashboard/DateFilterBar';
+import { MyTasksDeadlineBanner } from '../components/tasks/MyTasksDeadlineBanner';
 import { calculatePresetDates } from '../utils/filterUtils';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -23,6 +24,9 @@ const defaultFilters: TaskFilterParams = {
 const MyTasksPage: React.FC = () => {
   const { user } = useAuth();
   const [tasks, setTasks] = useState<TaskItem[]>([]);
+  // Lưu riêng danh sách đầy đủ các task chưa xong của user để tính banner cảnh báo độc lập với bộ lọc
+  const [allMyUrgentTasks, setAllMyUrgentTasks] = useState<TaskItem[]>([]);
+
   const [pagination, setPagination] = useState<TaskPagination>({
     page: 1,
     limit: 20,
@@ -38,6 +42,22 @@ const MyTasksPage: React.FC = () => {
   const [detailTask, setDetailTask] = useState<TaskItem | null>(null);
   const [deletingTask, setDeletingTask] = useState<TaskItem | null>(null);
 
+  // 1. Tải danh sách task của user để phục vụ banner cảnh báo
+  const fetchUrgentOverview = useCallback(async () => {
+    try {
+      const res = (await api.get('/tasks/my?limit=100')) as unknown as {
+        success: boolean;
+        data: TaskItem[];
+      };
+      if (res.success && res.data) {
+        setAllMyUrgentTasks(res.data);
+      }
+    } catch (err) {
+      console.error('Không thể lấy danh sách cảnh báo', err);
+    }
+  }, []);
+
+  // 2. Tải danh sách task có áp dụng bộ lọc và phân trang
   const fetchMyTasks = useCallback(async () => {
     setLoading(true);
     setError('');
@@ -78,8 +98,22 @@ const MyTasksPage: React.FC = () => {
   }, [pagination.page, pagination.limit, filters]);
 
   useEffect(() => {
+    fetchUrgentOverview();
+  }, [fetchUrgentOverview]);
+
+  useEffect(() => {
     fetchMyTasks();
   }, [fetchMyTasks]);
+
+  const handleTaskSaved = () => {
+    fetchUrgentOverview();
+    fetchMyTasks();
+  };
+
+  const handleTaskDeleted = () => {
+    fetchUrgentOverview();
+    fetchMyTasks();
+  };
 
   const canEditDetailTask = Boolean(
     detailTask && (user?.isAdmin || detailTask.assignees.some((a) => a.userId === user?.id))
@@ -93,7 +127,7 @@ const MyTasksPage: React.FC = () => {
             Công Việc Của Tôi
           </h2>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Những nhiệm vụ mà bạn được phân công thực hiện.
+            Những nhiệm vụ mà bạn được phân công trực tiếp thực hiện.
           </p>
         </div>
 
@@ -109,6 +143,12 @@ const MyTasksPage: React.FC = () => {
         </button>
       </div>
 
+      {/* Banner Cảnh báo Deadline nổi bật */}
+      <MyTasksDeadlineBanner
+        tasks={allMyUrgentTasks}
+        onSelectTask={(task) => setDetailTask(task)}
+      />
+
       {error && (
         <div className="flex items-center space-x-2 p-3 text-sm rounded-lg bg-red-50 text-red-700 dark:bg-red-950/50 dark:text-red-400 border border-red-200 dark:border-red-900">
           <AlertCircle size={18} className="shrink-0" />
@@ -116,6 +156,7 @@ const MyTasksPage: React.FC = () => {
         </div>
       )}
 
+      {/* Bộ lọc ngày & trạng thái */}
       <DateFilterBar
         filters={filters}
         onChange={(newFilters) => {
@@ -125,6 +166,7 @@ const MyTasksPage: React.FC = () => {
         showAssigneeFilter={false}
       />
 
+      {/* Bảng công việc */}
       <TaskTable
         tasks={tasks}
         page={pagination.page}
@@ -176,13 +218,13 @@ const MyTasksPage: React.FC = () => {
         isOpen={isTaskModalOpen}
         taskToEdit={editingTask}
         onClose={() => setIsTaskModalOpen(false)}
-        onSuccess={fetchMyTasks}
+        onSuccess={handleTaskSaved}
       />
 
       <DeleteConfirmModal
         task={deletingTask}
         onClose={() => setDeletingTask(null)}
-        onSuccess={fetchMyTasks}
+        onSuccess={handleTaskDeleted}
       />
     </div>
   );
