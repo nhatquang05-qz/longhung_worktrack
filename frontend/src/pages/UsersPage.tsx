@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { UserPlus, KeyRound, ShieldAlert, ShieldCheck, Lock, Unlock, AlertCircle } from 'lucide-react';
+import { UserPlus, KeyRound, Lock, Unlock, AlertCircle } from 'lucide-react';
 import api from '../services/api';
 import { ApiResponse } from '../types/api';
 import { ManagedUser } from '../types/user';

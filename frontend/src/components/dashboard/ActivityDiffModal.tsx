@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, ArrowRight, CheckCircle2, History, AlertCircle } from 'lucide-react';
+import { X, History } from 'lucide-react';
 import { TaskActivity } from '../../types/activity';
 import { formatDateTime } from '../../utils/dateUtils';
 
