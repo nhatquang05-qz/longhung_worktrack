@@ -1,9 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, ChevronLeft, ChevronRight, AlertCircle } from 'lucide-react';
 import api from '../services/api';
-import { DashboardStats } from '../types/dashboard';
 import { TaskItem, TaskPagination } from '../types/task';
-import { DashboardHeroStats } from '../components/dashboard/DashboardHeroStats';
 import { TaskTable } from '../components/tasks/TaskTable';
 import { TaskModal } from '../components/tasks/TaskModal';
 import { TaskDetailModal } from '../components/tasks/TaskDetailModal';
@@ -22,49 +20,27 @@ const defaultFilters: TaskFilterParams = {
   customEnd: '',
 };
 
-const HomePage: React.FC = () => {
+const TasksPage: React.FC = () => {
   const { user } = useAuth();
-  const [stats, setStats] = useState<DashboardStats>({
-    totalTasks: 0,
-    todoCount: 0,
-    inProgressCount: 0,
-    completedCount: 0,
-    warningCount: 0,
-    overdueCount: 0,
-  });
-
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [pagination, setPagination] = useState<TaskPagination>({
     page: 1,
-    limit: 10,
+    limit: 20,
     total: 0,
     totalPages: 1,
   });
-
   const [filters, setFilters] = useState<TaskFilterParams>(defaultFilters);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<TaskItem | null>(null);
   const [detailTask, setDetailTask] = useState<TaskItem | null>(null);
   const [deletingTask, setDeletingTask] = useState<TaskItem | null>(null);
 
-  const fetchStats = async () => {
-    try {
-      const res = (await api.get('/dashboard/stats')) as unknown as {
-        success: boolean;
-        data: DashboardStats;
-      };
-      if (res.success && res.data) {
-        setStats(res.data);
-      }
-    } catch (err) {
-      console.error('Không thể lấy thống kê Dashboard', err);
-    }
-  };
-
   const fetchTasks = useCallback(async () => {
     setLoading(true);
+    setError('');
     try {
       const params = new URLSearchParams({
         page: pagination.page.toString(),
@@ -95,30 +71,16 @@ const HomePage: React.FC = () => {
         setTasks(res.data);
         setPagination(res.pagination);
       }
-    } catch (err) {
-      console.error('Không thể lấy danh sách công việc', err);
+    } catch (err: any) {
+      setError(err.message || 'Không thể tải danh sách công việc');
     } finally {
       setLoading(false);
     }
   }, [pagination.page, pagination.limit, filters]);
 
   useEffect(() => {
-    fetchStats();
-  }, []);
-
-  useEffect(() => {
     fetchTasks();
   }, [fetchTasks]);
-
-  const handleTaskSaved = () => {
-    fetchStats();
-    fetchTasks();
-  };
-
-  const handleTaskDeleted = () => {
-    fetchStats();
-    fetchTasks();
-  };
 
   const canEditDetailTask = Boolean(
     detailTask && (user?.isAdmin || detailTask.assignees.some((a) => a.userId === user?.id))
@@ -129,10 +91,10 @@ const HomePage: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">
-            Bảng Điều Khiển
+            Tất Cả Công Việc
           </h2>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Tổng hợp tiến độ và các công việc cần chú ý của toàn đội ngũ.
+            Theo dõi chéo tiến độ toàn bộ công việc của đội ngũ.
           </p>
         </div>
 
@@ -148,10 +110,13 @@ const HomePage: React.FC = () => {
         </button>
       </div>
 
-      {/* Cụm thống kê Hero Layout mới */}
-      <DashboardHeroStats stats={stats} />
+      {error && (
+        <div className="flex items-center space-x-2 p-3 text-sm rounded-lg bg-red-50 text-red-700 dark:bg-red-950/50 dark:text-red-400 border border-red-200 dark:border-red-900">
+          <AlertCircle size={18} className="shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
 
-      {/* Bộ lọc nâng cao */}
       <DateFilterBar
         filters={filters}
         onChange={(newFilters) => {
@@ -161,30 +126,42 @@ const HomePage: React.FC = () => {
         showAssigneeFilter={true}
       />
 
-      {/* Bảng công việc */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between px-1">
-          <h3 className="font-semibold text-slate-800 dark:text-slate-200 text-base">
-            Danh sách công việc
-          </h3>
-          <span className="text-xs text-slate-400">
-            Tổng cộng: {pagination.total} công việc (Click vào dòng để xem chi tiết)
-          </span>
-        </div>
+      <TaskTable
+        tasks={tasks}
+        page={pagination.page}
+        limit={pagination.limit}
+        loading={loading}
+        onSelectTask={(task) => setDetailTask(task)}
+        onEdit={(task) => {
+          setEditingTask(task);
+          setIsTaskModalOpen(true);
+        }}
+        onDelete={(task) => setDeletingTask(task)}
+      />
 
-        <TaskTable
-          tasks={tasks}
-          page={pagination.page}
-          limit={pagination.limit}
-          loading={loading}
-          onSelectTask={(task) => setDetailTask(task)}
-          onEdit={(task) => {
-            setEditingTask(task);
-            setIsTaskModalOpen(true);
-          }}
-          onDelete={(task) => setDeletingTask(task)}
-        />
-      </div>
+      {pagination.totalPages > 1 && (
+        <div className="flex items-center justify-between text-sm text-slate-500 dark:text-slate-400 pt-2">
+          <div>
+            Hiển thị trang {pagination.page} trên tổng số {pagination.totalPages} ({pagination.total} công việc)
+          </div>
+          <div className="flex items-center space-x-2">
+            <button
+              disabled={pagination.page <= 1}
+              onClick={() => setPagination((p) => ({ ...p, page: p.page - 1 }))}
+              className="p-2 rounded-lg border border-slate-200 dark:border-slate-800 disabled:opacity-40 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <button
+              disabled={pagination.page >= pagination.totalPages}
+              onClick={() => setPagination((p) => ({ ...p, page: p.page + 1 }))}
+              className="p-2 rounded-lg border border-slate-200 dark:border-slate-800 disabled:opacity-40 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+            >
+              <ChevronRight size={16} />
+            </button>
+          </div>
+        </div>
+      )}
 
       <TaskDetailModal
         task={detailTask}
@@ -200,16 +177,16 @@ const HomePage: React.FC = () => {
         isOpen={isTaskModalOpen}
         taskToEdit={editingTask}
         onClose={() => setIsTaskModalOpen(false)}
-        onSuccess={handleTaskSaved}
+        onSuccess={fetchTasks}
       />
 
       <DeleteConfirmModal
         task={deletingTask}
         onClose={() => setDeletingTask(null)}
-        onSuccess={handleTaskDeleted}
+        onSuccess={fetchTasks}
       />
     </div>
   );
 };
 
-export default HomePage;
+export default TasksPage;

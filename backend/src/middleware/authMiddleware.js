@@ -16,10 +16,17 @@ export const requireAuth = async (req, res, next) => {
     const decoded = jwt.verify(token, ENV.JWT_SECRET);
 
     const user = await userRepository.findById(decoded.id);
-    if (!user || !user.is_active) {
+    if (!user) {
       return res.status(401).json({
         success: false,
-        message: 'Tài khoản không tồn tại hoặc đã bị khóa',
+        message: 'Tài khoản không tồn tại trên hệ thống',
+      });
+    }
+
+    if (!user.is_active) {
+      return res.status(401).json({
+        success: false,
+        message: 'Tài khoản của bạn đã bị vô hiệu hóa',
       });
     }
 
