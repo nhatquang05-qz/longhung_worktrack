@@ -72,89 +72,104 @@ export const isUserAssignedToTask = async (taskId, userId) => {
   return rows.length > 0;
 };
 
-export const findTasksWithPagination = async (filters, onlyAssignedUserId = null) => {
-  const { page, limit, search, status, assigneeId, startDate, endDate, timeField } = filters;
-  const offset = (page - 1) * limit;
+export const findTasksWithPagination = async (filters = {}, onlyAssignedUserId = null) => {
+  const {
+    page = 1,
+    limit = 10,
+    search,
+    status,
+    assigneeId,
+    startDate,
+    endDate,
+    timeField = 'end_time',
+  } = filters;
 
-  // Bảo vệ SQL Injection: Whitelist strictly tên cột thời gian
-  const safeTimeField = timeField === 'start_time' ? 'start_time' : 'end_time';
+  const pageNum = Math.max(1, parseInt(page, 10) || 1);
+  const limitNum = Math.max(1, parseInt(limit, 10) || 10);
+  const offset = (pageNum - 1) * limitNum;
 
-  const whereClauses = [];
+  const whereClauses = ['1=1'];
   const params = [];
 
-  if (onlyAssignedUserId) {
-    whereClauses.push(`EXISTS (SELECT 1 FROM task_assignees ta_filter WHERE ta_filter.task_id = t.id AND ta_filter.user_id = ?)`);
-    params.push(onlyAssignedUserId);
-  } else if (assigneeId) {
-    whereClauses.push(`EXISTS (SELECT 1 FROM task_assignees ta_filter WHERE ta_filter.task_id = t.id AND ta_filter.user_id = ?)`);
-    params.push(assigneeId);
-  }
+  const targetTimeColumn = timeField === 'start_time' ? 't.start_time' : 't.end_time';
 
   if (status) {
-    whereClauses.push(`t.status = ?`);
+    whereClauses.push('t.status = ?');
     params.push(status);
   }
 
   if (startDate) {
-    whereClauses.push(`t.${safeTimeField} >= ?`);
+    whereClauses.push(`${targetTimeColumn} >= ?`);
     params.push(startDate);
   }
 
   if (endDate) {
-    whereClauses.push(`t.${safeTimeField} <= ?`);
+    whereClauses.push(`${targetTimeColumn} <= ?`);
     params.push(endDate);
   }
 
-  if (search) {
+  if (search && search.trim()) {
     whereClauses.push(`(
       t.title LIKE ? 
       OR t.submitter_name LIKE ? 
+      OR t.notes LIKE ? 
       OR EXISTS (
-        SELECT 1 FROM task_assignees ta_s 
-        LEFT JOIN users u_s ON ta_s.user_id = u_s.id 
-        WHERE ta_s.task_id = t.id AND (u_s.full_name LIKE ? OR ta_s.other_assignee_name LIKE ?)
+        SELECT 1 FROM task_assignees sub_ta 
+        LEFT JOIN users sub_u ON sub_ta.user_id = sub_u.id
+        WHERE sub_ta.task_id = t.id 
+          AND (sub_u.full_name LIKE ? OR sub_ta.other_assignee_name LIKE ?)
       )
     )`);
-    const searchParam = `%${search}%`;
-    params.push(searchParam, searchParam, searchParam, searchParam);
+    const s = `%${search.trim()}%`;
+    params.push(s, s, s, s, s);
   }
 
-  const whereSQL = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+  if (onlyAssignedUserId) {
+    whereClauses.push(`EXISTS (
+      SELECT 1 FROM task_assignees ta_filter 
+      WHERE ta_filter.task_id = t.id AND ta_filter.user_id = ?
+    )`);
+    params.push(onlyAssignedUserId);
+  } else if (assigneeId) {
+    whereClauses.push(`EXISTS (
+      SELECT 1 FROM task_assignees ta_filter 
+      WHERE ta_filter.task_id = t.id AND ta_filter.user_id = ?
+    )`);
+    params.push(assigneeId);
+  }
 
-  const countSql = `SELECT COUNT(*) AS total FROM tasks t ${whereSQL}`;
-  const countResult = await query(countSql, params);
-  const total = countResult[0]?.total || 0;
+  const whereSQL = `WHERE ${whereClauses.join(' AND ')}`;
 
-  const listSql = `
+  // Đếm tổng số bản ghi
+  const countSql = `
+    SELECT COUNT(DISTINCT t.id) as total
+    FROM tasks t
+    ${whereSQL}
+  `;
+  const countRows = await query(countSql, params);
+  const total = countRows?.[0]?.total || 0;
+  const totalPages = Math.ceil(total / limitNum) || 1;
+
+  // Truy vấn lấy dữ liệu với LIMIT và OFFSET dạng số nguyên trực tiếp
+  const dataSql = `
     SELECT 
-      t.id,
-      t.title,
-      t.start_time,
-      t.end_time,
-      t.status,
-      t.completed_at,
-      t.format,
-      t.drive_url,
-      t.notes,
-      t.submitter_name,
-      t.created_by,
-      t.created_at,
-      t.updated_at,
+      t.*,
       u.full_name AS creator_name
     FROM tasks t
     LEFT JOIN users u ON t.created_by = u.id
     ${whereSQL}
-    ORDER BY t.${safeTimeField} ASC, t.id DESC
-    LIMIT ? OFFSET ?
+    ORDER BY t.created_at DESC, t.id DESC
+    LIMIT ${limitNum} OFFSET ${offset}
   `;
-  const rows = await query(listSql, [...params, limit, offset]);
+
+  const rows = await query(dataSql, params);
 
   return {
-    rows,
+    rows: rows || [],
+    page: pageNum,
+    limit: limitNum,
     total,
-    page,
-    limit,
-    totalPages: Math.ceil(total / limit) || 1,
+    totalPages,
   };
 };
 

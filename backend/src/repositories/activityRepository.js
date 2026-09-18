@@ -48,7 +48,9 @@ export const getRecentActivities = async (filters = {}, limit = 20) => {
   }
 
   const whereSQL = `WHERE ${whereClauses.join(' AND ')}`;
+  const safeLimit = Math.max(1, parseInt(limit, 10) || 20);
 
+  // TiDB Cloud yêu cầu số nguyên trực tiếp trong LIMIT để tránh lỗi "Incorrect arguments to LIMIT"
   const sql = `
     SELECT 
       ta.id,
@@ -64,12 +66,12 @@ export const getRecentActivities = async (filters = {}, limit = 20) => {
     FROM task_activities ta
     ${whereSQL}
     ORDER BY ta.created_at DESC, ta.id DESC
-    LIMIT ?
+    LIMIT ${safeLimit}
   `;
 
-  const rows = await query(sql, [...params, limit]);
+  const rows = await query(sql, params);
 
-  return rows.map((r) => ({
+  return (rows || []).map((r) => ({
     ...r,
     old_data: typeof r.old_data === 'string' ? JSON.parse(r.old_data) : r.old_data,
     new_data: typeof r.new_data === 'string' ? JSON.parse(r.new_data) : r.new_data,
