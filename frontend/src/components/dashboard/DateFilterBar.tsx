@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, Calendar } from 'lucide-react';
+import { Search, Calendar, Info } from 'lucide-react';
 import { ManagedUser } from '../../types/user';
 import { DatePreset } from '../../utils/filterUtils';
 import api from '../../services/api';
@@ -21,7 +21,6 @@ interface DateFilterBarProps {
   showAssigneeFilter?: boolean;
 }
 
-// Component Date Input hiển thị bắt buộc định dạng dd/mm/yyyy
 const VietDateInput: React.FC<{
   value: string;
   onChange: (val: string) => void;
@@ -113,25 +112,69 @@ export const DateFilterBar: React.FC<DateFilterBarProps> = ({
     { id: 'CUSTOM', label: 'Khoảng ngày' },
   ];
 
+  const getPresetDescription = (preset: DatePreset) => {
+    const now = new Date();
+    const pad = (n: number) => n.toString().padStart(2, '0');
+
+    if (preset === 'THIS_WEEK') {
+      const dayOfWeek = now.getDay();
+      const distanceToMonday = (dayOfWeek + 6) % 7;
+      const monday = new Date(now);
+      monday.setDate(now.getDate() - distanceToMonday);
+
+      const sunday = new Date(monday);
+      sunday.setDate(monday.getDate() + 6);
+
+      const mStr = `${pad(monday.getDate())}/${pad(monday.getMonth() + 1)}/${monday.getFullYear()}`;
+      const sStr = `${pad(sunday.getDate())}/${pad(sunday.getMonth() + 1)}/${sunday.getFullYear()}`;
+      return `Thứ Hai (${mStr}) ➔ Chủ Nhật (${sStr})`;
+    }
+
+    if (preset === 'THIS_MONTH') {
+      const month = pad(now.getMonth() + 1);
+      const year = now.getFullYear();
+      const lastDay = new Date(year, now.getMonth() + 1, 0).getDate();
+      return `Tháng ${month}/${year} (01/${month} ➔ ${lastDay}/${month}/${year})`;
+    }
+
+    if (preset === 'THIS_YEAR') {
+      const year = now.getFullYear();
+      return `Năm ${year} (01/01/${year} ➔ 31/12/${year})`;
+    }
+
+    return null;
+  };
+
+  const presetDesc = getPresetDescription(filters.preset);
+
   return (
     <div className="space-y-3 bg-white dark:bg-slate-900 p-4 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm">
       {/* Hàng 1: Preset Buttons & Time field */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-3">
-        <div className="flex items-center space-x-1 overflow-x-auto">
-          {presets.map((p) => (
-            <button
-              key={p.id}
-              type="button"
-              onClick={() => update({ preset: p.id })}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition ${
-                filters.preset === p.id
-                  ? 'bg-blue-600 text-white shadow-sm'
-                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-              }`}
-            >
-              {p.label}
-            </button>
-          ))}
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center space-x-1 overflow-x-auto">
+            {presets.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => update({ preset: p.id })}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition ${
+                  filters.preset === p.id
+                    ? 'bg-blue-600 text-white shadow-sm'
+                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                }`}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+
+          {presetDesc && (
+            <div className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-md bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800/80 text-[11px] font-medium animate-in fade-in duration-200">
+              <Info size={13} className="shrink-0 text-blue-500" />
+              <span>{presetDesc}</span>
+            </div>
+          )}
         </div>
 
         <div className="flex items-center space-x-2 text-xs text-slate-500 dark:text-slate-400">
@@ -140,7 +183,7 @@ export const DateFilterBar: React.FC<DateFilterBarProps> = ({
           <select
             value={filters.timeField}
             onChange={(e) => update({ timeField: e.target.value as any })}
-            className="px-2 py-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md text-xs focus:outline-none dark:text-slate-100"
+            className="px-2 py-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md text-xs focus:outline-none dark:text-slate-100 font-medium"
           >
             <option value="end_time">Thời hạn (Deadline)</option>
             <option value="start_time">Ngày bắt đầu</option>
@@ -148,7 +191,7 @@ export const DateFilterBar: React.FC<DateFilterBarProps> = ({
         </div>
       </div>
 
-      {/* Hàng 2: Hiển thị khoảng ngày với định dạng dd/mm/yyyy */}
+      {/* Hàng 2: Chọn khoảng ngày tự do */}
       {filters.preset === 'CUSTOM' && (
         <div className="flex flex-wrap items-center gap-4 p-2.5 bg-slate-50 dark:bg-slate-800/50 rounded-lg text-xs border border-slate-200 dark:border-slate-700 animate-in fade-in duration-150">
           <VietDateInput

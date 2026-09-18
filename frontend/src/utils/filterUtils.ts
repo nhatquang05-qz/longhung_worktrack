@@ -23,6 +23,7 @@ export const calculatePresetDates = (preset: DatePreset): DateRangeResult => {
     const monday = new Date(now);
     monday.setDate(now.getDate() - distanceToMonday);
 
+    // Lấy đến Chủ Nhật (cộng 6 ngày từ Thứ 2)
     const sunday = new Date(monday);
     sunday.setDate(monday.getDate() + 6);
 
