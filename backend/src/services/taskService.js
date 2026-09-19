@@ -109,12 +109,19 @@ const attachAssigneesToTasks = async (tasks) => {
 };
 
 export const getTasks = async (queryFilters, onlyAssignedUserId = null) => {
-  const cacheKey = `tasks_${onlyAssignedUserId || 'all'}_${JSON.stringify(queryFilters)}`;
+  const normalizedKey = Object.keys(queryFilters || {})
+    .sort()
+    .map((k) => `${k}=${queryFilters[k]}`)
+    .join('&');
+  const cacheKey = `tasks_${onlyAssignedUserId || 'all'}_${normalizedKey}`;
+
   const cachedData = memoryCache.get(cacheKey);
   if (cachedData) {
+    console.log(`⚡ [CACHE HIT] Lấy từ RAM (0 RU TiDB): ${cacheKey}`);
     return cachedData;
   }
 
+  console.log(`🐢 [CACHE MISS] Truy vấn SQL TiDB: ${cacheKey}`);
   const result = await taskRepository.findTasksWithPagination(queryFilters, onlyAssignedUserId);
   const tasksWithAssignees = await attachAssigneesToTasks(result.rows);
 
@@ -134,6 +141,13 @@ export const getTasks = async (queryFilters, onlyAssignedUserId = null) => {
 };
 
 export const getTaskDetail = async (taskId) => {
+  const cacheKey = `task_detail_${taskId}`;
+  const cached = memoryCache.get(cacheKey);
+  if (cached) {
+    console.log(`⚡ [CACHE HIT] Detail Task #${taskId} từ RAM`);
+    return cached;
+  }
+
   const task = await taskRepository.findById(taskId);
   if (!task) {
     const error = new Error('Không tìm thấy công việc yêu cầu');
@@ -150,7 +164,7 @@ export const getTaskDetail = async (taskId) => {
     isAccount: Boolean(a.user_id),
   }));
 
-  return {
+  const detailData = {
     id: task.id,
     title: task.title,
     startTime: task.start_time,
@@ -167,6 +181,9 @@ export const getTaskDetail = async (taskId) => {
     updatedAt: task.updated_at,
     assignees,
   };
+
+  memoryCache.set(cacheKey, detailData, 300);
+  return detailData;
 };
 
 export const createTask = async (data, currentUser) => {
@@ -214,6 +231,7 @@ export const createTask = async (data, currentUser) => {
   });
 
   clearTaskCache();
+  console.log('🧹 [CACHE CLEARED] Đã xóa cache sau khi tạo công việc mới');
 
   return createdTask;
 };
@@ -327,6 +345,7 @@ export const updateTask = async (taskId, data, currentUser) => {
     normalizedAssignees
   );
 
+  memoryCache.del(`task_detail_${taskId}`);
   const newTaskSnapshot = await getTaskDetail(taskId);
   const detailText = changes.length > 0 ? changes.join('; ') : 'Cập nhật lại thông tin (không có thay đổi giá trị)';
 
@@ -342,6 +361,7 @@ export const updateTask = async (taskId, data, currentUser) => {
   });
 
   clearTaskCache();
+  console.log(`🧹 [CACHE CLEARED] Đã xóa cache sau khi cập nhật công việc #${taskId}`);
 
   return newTaskSnapshot;
 };
@@ -378,7 +398,9 @@ export const deleteTask = async (taskId, currentUser) => {
     newData: null,
   });
 
+  memoryCache.del(`task_detail_${taskId}`);
   clearTaskCache();
+  console.log(`🧹 [CACHE CLEARED] Đã xóa cache sau khi xóa công việc #${taskId}`);
 
   return { message: 'Đã xóa công việc thành công' };
 };
