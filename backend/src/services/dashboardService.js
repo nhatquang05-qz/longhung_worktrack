@@ -7,22 +7,15 @@ export const getDashboardStats = async (filters = {}, userId = null) => {
   const whereClauses = ['1=1'];
   const params = [];
 
-  // 1. Phân quyền cá nhân (scope=my) hoặc lọc theo thành viên cụ thể
-  if (userId) {
+  const targetUserId = userId || assigneeId;
+  if (targetUserId) {
     whereClauses.push(`EXISTS (
       SELECT 1 FROM task_assignees ta 
       WHERE ta.task_id = t.id AND ta.user_id = ?
     )`);
-    params.push(userId);
-  } else if (assigneeId) {
-    whereClauses.push(`EXISTS (
-      SELECT 1 FROM task_assignees ta 
-      WHERE ta.task_id = t.id AND ta.user_id = ?
-    )`);
-    params.push(assigneeId);
+    params.push(targetUserId);
   }
 
-  // 2. Lọc theo mốc thời gian (bắt đầu hoặc kết thúc)
   if (startDate) {
     whereClauses.push(`t.${safeTimeField} >= ?`);
     params.push(startDate);
@@ -33,7 +26,6 @@ export const getDashboardStats = async (filters = {}, userId = null) => {
     params.push(endDate);
   }
 
-  // 3. Lọc theo từ khóa tìm kiếm nếu có
   if (search && search.trim()) {
     whereClauses.push(`(
       t.title LIKE ? 
@@ -53,22 +45,22 @@ export const getDashboardStats = async (filters = {}, userId = null) => {
   const sql = `
     SELECT
       COUNT(*) AS total_tasks,
-      SUM(CASE WHEN t.status = 'TODO' THEN 1 ELSE 0 END) AS todo_count,
-      SUM(CASE WHEN t.status = 'IN_PROGRESS' THEN 1 ELSE 0 END) AS in_progress_count,
-      SUM(CASE WHEN t.status = 'COMPLETED' THEN 1 ELSE 0 END) AS completed_count,
-      SUM(
+      COUNT(CASE WHEN t.status = 'TODO' THEN 1 END) AS todo_count,
+      COUNT(CASE WHEN t.status = 'IN_PROGRESS' THEN 1 END) AS in_progress_count,
+      COUNT(CASE WHEN t.status = 'COMPLETED' THEN 1 END) AS completed_count,
+      COUNT(
         CASE 
           WHEN t.status != 'COMPLETED' 
                AND t.end_time >= NOW() 
                AND t.end_time <= DATE_ADD(NOW(), INTERVAL 24 HOUR) 
-          THEN 1 ELSE 0 
+          THEN 1 
         END
       ) AS warning_count,
-      SUM(
+      COUNT(
         CASE 
           WHEN t.status != 'COMPLETED' 
                AND t.end_time < NOW() 
-          THEN 1 ELSE 0 
+          THEN 1 
         END
       ) AS overdue_count
     FROM tasks t

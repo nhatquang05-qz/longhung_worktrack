@@ -124,24 +124,19 @@ export const findTasksWithPagination = async (filters = {}, onlyAssignedUserId =
     params.push(s, s, s, s, s);
   }
 
-  if (onlyAssignedUserId) {
+  const targetUserId = onlyAssignedUserId || assigneeId;
+  if (targetUserId) {
     whereClauses.push(`EXISTS (
       SELECT 1 FROM task_assignees ta_filter 
       WHERE ta_filter.task_id = t.id AND ta_filter.user_id = ?
     )`);
-    params.push(onlyAssignedUserId);
-  } else if (assigneeId) {
-    whereClauses.push(`EXISTS (
-      SELECT 1 FROM task_assignees ta_filter 
-      WHERE ta_filter.task_id = t.id AND ta_filter.user_id = ?
-    )`);
-    params.push(assigneeId);
+    params.push(targetUserId);
   }
 
   const whereSQL = `WHERE ${whereClauses.join(' AND ')}`;
 
   const countSql = `
-    SELECT COUNT(DISTINCT t.id) as total
+    SELECT COUNT(*) as total
     FROM tasks t
     ${whereSQL}
   `;
@@ -151,7 +146,19 @@ export const findTasksWithPagination = async (filters = {}, onlyAssignedUserId =
 
   const dataSql = `
     SELECT 
-      t.*,
+      t.id,
+      t.title,
+      t.start_time,
+      t.end_time,
+      t.status,
+      t.completed_at,
+      t.format,
+      t.drive_url,
+      t.notes,
+      t.submitter_name,
+      t.created_by,
+      t.created_at,
+      t.updated_at,
       u.full_name AS creator_name
     FROM tasks t
     LEFT JOIN users u ON t.created_by = u.id

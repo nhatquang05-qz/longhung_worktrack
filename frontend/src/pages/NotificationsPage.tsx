@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AlertTriangle, Clock, ArrowRight, BellOff, RefreshCw } from 'lucide-react';
 import api from '../services/api';
@@ -11,8 +11,8 @@ const NotificationsPage: React.FC = () => {
   const [filterType, setFilterType] = useState<'ALL' | 'OVERDUE' | 'WARNING'>('ALL');
   const navigate = useNavigate();
 
-  const fetchNotifications = async () => {
-    setLoading(true);
+  const fetchNotifications = useCallback(async (showLoading = true) => {
+    if (showLoading) setLoading(true);
     try {
       const res = (await api.get('/notifications')) as unknown as {
         success: boolean;
@@ -24,13 +24,22 @@ const NotificationsPage: React.FC = () => {
     } catch (err) {
       console.error('Lỗi khi tải thông báo', err);
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    fetchNotifications();
-  }, []);
+    fetchNotifications(true);
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchNotifications(false);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [fetchNotifications]);
 
   const filteredNotifications = notifications.filter((n) => {
     if (filterType === 'ALL') return true;
@@ -50,7 +59,7 @@ const NotificationsPage: React.FC = () => {
         </div>
 
         <button
-          onClick={fetchNotifications}
+          onClick={() => fetchNotifications(true)}
           disabled={loading}
           className="inline-flex items-center space-x-2 px-3.5 py-2 border border-slate-200 dark:border-slate-800 rounded-lg text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition disabled:opacity-50"
         >

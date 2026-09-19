@@ -71,8 +71,25 @@ const Topbar: React.FC<TopbarProps> = ({ onMenuToggle }) => {
 
   useEffect(() => {
     fetchNotifications();
-    const interval = setInterval(fetchNotifications, 60000);
-    return () => clearInterval(interval);
+
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        fetchNotifications();
+      }
+    }, 180000);
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchNotifications();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [fetchNotifications]);
 
   useEffect(() => {
