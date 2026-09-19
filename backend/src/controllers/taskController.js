@@ -6,8 +6,6 @@ export const handleGetTasks = async (req, res, next) => {
     const queryFilters = taskQuerySchema.parse(req.query);
     const result = await taskService.getTasks(queryFilters, null);
 
-    res.set('Cache-Control', 'private, max-age=30, must-revalidate');
-
     return res.status(200).json({
       success: true,
       data: result.data,
@@ -29,8 +27,6 @@ export const handleGetMyTasks = async (req, res, next) => {
     const queryFilters = taskQuerySchema.parse(req.query);
     const result = await taskService.getTasks(queryFilters, req.user.id);
 
-    res.set('Cache-Control', 'private, max-age=30, must-revalidate');
-
     return res.status(200).json({
       success: true,
       data: result.data,
@@ -51,8 +47,6 @@ export const handleGetTaskDetail = async (req, res, next) => {
   try {
     const { id } = req.params;
     const task = await taskService.getTaskDetail(id);
-
-    res.set('Cache-Control', 'private, max-age=30, must-revalidate');
 
     return res.status(200).json({
       success: true,

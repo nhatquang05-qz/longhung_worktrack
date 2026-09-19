@@ -1,6 +1,7 @@
 import * as taskRepository from '../repositories/taskRepository.js';
 import * as userRepository from '../repositories/userRepository.js';
 import * as activityRepository from '../repositories/activityRepository.js';
+import { memoryCache, clearTaskCache } from '../config/cache.js';
 
 const getLocalDateTimeString = () => {
   const d = new Date();
@@ -108,10 +109,16 @@ const attachAssigneesToTasks = async (tasks) => {
 };
 
 export const getTasks = async (queryFilters, onlyAssignedUserId = null) => {
+  const cacheKey = `tasks_${onlyAssignedUserId || 'all'}_${JSON.stringify(queryFilters)}`;
+  const cachedData = memoryCache.get(cacheKey);
+  if (cachedData) {
+    return cachedData;
+  }
+
   const result = await taskRepository.findTasksWithPagination(queryFilters, onlyAssignedUserId);
   const tasksWithAssignees = await attachAssigneesToTasks(result.rows);
 
-  return {
+  const responseData = {
     data: tasksWithAssignees,
     pagination: {
       page: result.page,
@@ -120,6 +127,10 @@ export const getTasks = async (queryFilters, onlyAssignedUserId = null) => {
       totalPages: result.totalPages,
     },
   };
+
+  memoryCache.set(cacheKey, responseData, 300);
+
+  return responseData;
 };
 
 export const getTaskDetail = async (taskId) => {
@@ -202,6 +213,8 @@ export const createTask = async (data, currentUser) => {
     newData: createdTask,
   });
 
+  clearTaskCache();
+
   return createdTask;
 };
 
@@ -216,7 +229,6 @@ export const updateTask = async (taskId, data, currentUser) => {
   const isAssigned = await taskRepository.isUserAssignedToTask(taskId, currentUser.id);
   const isCreator = existingTask.created_by === currentUser.id;
 
-  // Cho phép chỉnh sửa nếu là Admin, hoặc người được giao việc, hoặc chính người tạo công việc
   if (!currentUser.isAdmin && !isAssigned && !isCreator) {
     const error = new Error('Bạn không có quyền chỉnh sửa công việc này');
     error.statusCode = 403;
@@ -233,7 +245,6 @@ export const updateTask = async (taskId, data, currentUser) => {
   const cleanSubmitter = data.submitterName?.trim() || null;
   await validateSubmitter(cleanSubmitter, normalizedAssignees);
 
-  // Snapshot cũ trước khi sửa
   const oldTaskSnapshot = await getTaskDetail(taskId);
   const oldAssigneeNames = oldTaskSnapshot.assignees.map((a) => a.fullName).sort().join(', ');
 
@@ -316,7 +327,6 @@ export const updateTask = async (taskId, data, currentUser) => {
     normalizedAssignees
   );
 
-  // Snapshot mới sau khi sửa
   const newTaskSnapshot = await getTaskDetail(taskId);
   const detailText = changes.length > 0 ? changes.join('; ') : 'Cập nhật lại thông tin (không có thay đổi giá trị)';
 
@@ -330,6 +340,8 @@ export const updateTask = async (taskId, data, currentUser) => {
     oldData: oldTaskSnapshot,
     newData: newTaskSnapshot,
   });
+
+  clearTaskCache();
 
   return newTaskSnapshot;
 };
@@ -345,7 +357,6 @@ export const deleteTask = async (taskId, currentUser) => {
   const isAssigned = await taskRepository.isUserAssignedToTask(taskId, currentUser.id);
   const isCreator = existingTask.created_by === currentUser.id;
 
-  // Cho phép xóa nếu là Admin, hoặc người được giao việc, hoặc chính người tạo công việc
   if (!currentUser.isAdmin && !isAssigned && !isCreator) {
     const error = new Error('Bạn không có quyền xóa công việc này');
     error.statusCode = 403;
@@ -366,6 +377,8 @@ export const deleteTask = async (taskId, currentUser) => {
     oldData: oldTaskSnapshot,
     newData: null,
   });
+
+  clearTaskCache();
 
   return { message: 'Đã xóa công việc thành công' };
 };
