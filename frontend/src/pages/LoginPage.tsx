@@ -110,11 +110,11 @@ const LoginPage: React.FC = () => {
         </form>
 
         <div className="text-xs text-center text-slate-400">
-          Tài khoản Admin mặc định: <span className="font-mono font-medium">admin</span> / <span className="font-mono font-medium">admin</span>
+          Mật khẩu đăng nhập lần đầu: password123 
         </div>
       </div>
     </div>
   );
-};
-
+}
+   
 export default LoginPage;
