@@ -214,7 +214,10 @@ export const updateTask = async (taskId, data, currentUser) => {
   }
 
   const isAssigned = await taskRepository.isUserAssignedToTask(taskId, currentUser.id);
-  if (!currentUser.isAdmin && !isAssigned) {
+  const isCreator = existingTask.created_by === currentUser.id;
+
+  // Cho phép chỉnh sửa nếu là Admin, hoặc người được giao việc, hoặc chính người tạo công việc
+  if (!currentUser.isAdmin && !isAssigned && !isCreator) {
     const error = new Error('Bạn không có quyền chỉnh sửa công việc này');
     error.statusCode = 403;
     throw error;
@@ -340,7 +343,10 @@ export const deleteTask = async (taskId, currentUser) => {
   }
 
   const isAssigned = await taskRepository.isUserAssignedToTask(taskId, currentUser.id);
-  if (!currentUser.isAdmin && !isAssigned) {
+  const isCreator = existingTask.created_by === currentUser.id;
+
+  // Cho phép xóa nếu là Admin, hoặc người được giao việc, hoặc chính người tạo công việc
+  if (!currentUser.isAdmin && !isAssigned && !isCreator) {
     const error = new Error('Bạn không có quyền xóa công việc này');
     error.statusCode = 403;
     throw error;

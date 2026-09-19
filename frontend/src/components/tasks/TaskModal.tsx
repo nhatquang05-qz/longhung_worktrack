@@ -5,6 +5,7 @@ import { TaskItem, TaskPayload, TaskStatus } from '../../types/task';
 import { ManagedUser } from '../../types/user';
 import { ApiResponse } from '../../types/api';
 import { toInputDateTime } from '../../utils/dateUtils';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface TaskModalProps {
   isOpen: boolean;
@@ -27,6 +28,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   onClose,
   onSuccess,
 }) => {
+  const { user: currentUser } = useAuth();
   const [title, setTitle] = useState('');
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
@@ -306,7 +308,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                   <option value="">-- Chọn thành viên hệ thống --</option>
                   {availableUsers.map((u) => (
                     <option key={u.id} value={u.id}>
-                      {u.fullName} (@{u.username})
+                      {u.fullName} (@{u.username}) {u.id === currentUser?.id ? '⭐ (Tôi)' : ''}
                     </option>
                   ))}
                   <option value="__OTHER__">➕ Khác (Phòng ban / Người ngoài hệ thống)</option>

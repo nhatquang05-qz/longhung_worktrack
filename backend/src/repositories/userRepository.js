@@ -8,7 +8,16 @@ export const findByUsername = async (username) => {
     LIMIT 1
   `;
   const rows = await query(sql, [username]);
-  return rows[0] || null;
+  if (!rows || rows.length === 0) return null;
+  const user = rows[0];
+
+  return {
+    ...user,
+    fullName: user.full_name,
+    isAdmin: Boolean(user.is_admin),
+    mustChangePassword: Boolean(user.must_change_password),
+    isActive: Boolean(user.is_active),
+  };
 };
 
 export const findById = async (id) => {
@@ -19,16 +28,47 @@ export const findById = async (id) => {
     LIMIT 1
   `;
   const rows = await query(sql, [id]);
-  return rows[0] || null;
+  if (!rows || rows.length === 0) return null;
+  const user = rows[0];
+
+  return {
+    ...user,
+    fullName: user.full_name,
+    isAdmin: Boolean(user.is_admin),
+    mustChangePassword: Boolean(user.must_change_password),
+    isActive: Boolean(user.is_active),
+  };
 };
 
 export const findAll = async () => {
   const sql = `
-    SELECT id, full_name, username, is_admin, must_change_password, is_active, created_at, updated_at
+    SELECT 
+      id, 
+      full_name, 
+      full_name AS fullName,
+      username, 
+      is_admin, 
+      is_admin AS isAdmin,
+      must_change_password, 
+      must_change_password AS mustChangePassword,
+      is_active, 
+      is_active AS isActive,
+      created_at, 
+      created_at AS createdAt,
+      updated_at,
+      updated_at AS updatedAt
     FROM users
     ORDER BY id ASC
   `;
-  return await query(sql);
+  const rows = await query(sql);
+  
+  return (rows || []).map((u) => ({
+    ...u,
+    fullName: u.full_name,
+    isAdmin: Boolean(u.is_admin),
+    mustChangePassword: Boolean(u.must_change_password),
+    isActive: Boolean(u.is_active),
+  }));
 };
 
 export const create = async ({ fullName, username, passwordHash }) => {

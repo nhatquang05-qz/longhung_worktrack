@@ -11,11 +11,10 @@ import { requireAdmin } from '../middleware/adminMiddleware.js';
 const router = Router();
 
 router.use(requireAuth);
-router.use(requireAdmin);
 
 router.get('/', handleGetUsers);
-router.post('/', handleCreateUser);
-router.patch('/:id/toggle-status', handleToggleUserStatus);
-router.post('/:id/reset-password', handleResetUserPassword);
+router.post('/', requireAdmin, handleCreateUser);
+router.patch('/:id/toggle-status', requireAdmin, handleToggleUserStatus);
+router.post('/:id/reset-password', requireAdmin, handleResetUserPassword);
 
 export default router;

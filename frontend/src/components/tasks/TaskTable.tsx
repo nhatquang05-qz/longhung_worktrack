@@ -107,7 +107,8 @@ export const TaskTable: React.FC<TaskTableProps> = ({
   const canModifyTask = (task: TaskItem): boolean => {
     if (!user) return false;
     if (user.isAdmin) return true;
-    return task.assignees.some((a) => a.userId === user.id);
+    // Người tạo công việc hoặc người được phân công đều có quyền sửa/xóa
+    return task.createdBy === user.id || task.assignees.some((a) => a.userId === user.id);
   };
 
   if (loading) {
