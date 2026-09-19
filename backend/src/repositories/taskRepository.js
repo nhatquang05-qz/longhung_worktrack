@@ -140,7 +140,6 @@ export const findTasksWithPagination = async (filters = {}, onlyAssignedUserId =
 
   const whereSQL = `WHERE ${whereClauses.join(' AND ')}`;
 
-  // Đếm tổng số bản ghi
   const countSql = `
     SELECT COUNT(DISTINCT t.id) as total
     FROM tasks t
@@ -150,7 +149,6 @@ export const findTasksWithPagination = async (filters = {}, onlyAssignedUserId =
   const total = countRows?.[0]?.total || 0;
   const totalPages = Math.ceil(total / limitNum) || 1;
 
-  // Truy vấn lấy dữ liệu với LIMIT và OFFSET dạng số nguyên trực tiếp
   const dataSql = `
     SELECT 
       t.*,
@@ -164,8 +162,34 @@ export const findTasksWithPagination = async (filters = {}, onlyAssignedUserId =
 
   const rows = await query(dataSql, params);
 
+  if (!rows || rows.length === 0) {
+    return {
+      rows: [],
+      page: pageNum,
+      limit: limitNum,
+      total,
+      totalPages,
+    };
+  }
+
+  const taskIds = rows.map((task) => task.id);
+  const allAssignees = await getAssigneesByTaskIds(taskIds);
+
+  const assigneesMap = {};
+  for (const assignee of allAssignees) {
+    if (!assigneesMap[assignee.task_id]) {
+      assigneesMap[assignee.task_id] = [];
+    }
+    assigneesMap[assignee.task_id].push(assignee);
+  }
+
+  const tasksWithAssignees = rows.map((task) => ({
+    ...task,
+    assignees: assigneesMap[task.id] || [],
+  }));
+
   return {
-    rows: rows || [],
+    rows: tasksWithAssignees,
     page: pageNum,
     limit: limitNum,
     total,
@@ -199,17 +223,20 @@ export const createTaskWithAssignees = async (taskData, assignees) => {
     const taskId = taskResult.insertId;
 
     if (assignees && assignees.length > 0) {
-      const assigneeSql = `
-        INSERT INTO task_assignees (task_id, user_id, other_assignee_name)
-        VALUES (?, ?, ?)
-      `;
+      const placeholders = assignees.map(() => '(?, ?, ?)').join(', ');
+      const flatParams = [];
       for (const item of assignees) {
-        await connection.execute(assigneeSql, [
+        flatParams.push(
           taskId,
           item.userId || null,
-          item.userId ? null : item.otherName || null,
-        ]);
+          item.userId ? null : item.otherName || null
+        );
       }
+      const assigneeSql = `
+        INSERT INTO task_assignees (task_id, user_id, other_assignee_name)
+        VALUES ${placeholders}
+      `;
+      await connection.execute(assigneeSql, flatParams);
     }
 
     await connection.commit();
@@ -255,16 +282,21 @@ export const updateTaskWithAssignees = async (taskId, taskData, assignees) => {
 
     await connection.execute(`DELETE FROM task_assignees WHERE task_id = ?`, [taskId]);
 
-    const assigneeSql = `
-      INSERT INTO task_assignees (task_id, user_id, other_assignee_name)
-      VALUES (?, ?, ?)
-    `;
-    for (const item of assignees) {
-      await connection.execute(assigneeSql, [
-        taskId,
-        item.userId || null,
-        item.userId ? null : item.otherName || null,
-      ]);
+    if (assignees && assignees.length > 0) {
+      const placeholders = assignees.map(() => '(?, ?, ?)').join(', ');
+      const flatParams = [];
+      for (const item of assignees) {
+        flatParams.push(
+          taskId,
+          item.userId || null,
+          item.userId ? null : item.otherName || null
+        );
+      }
+      const assigneeSql = `
+        INSERT INTO task_assignees (task_id, user_id, other_assignee_name)
+        VALUES ${placeholders}
+      `;
+      await connection.execute(assigneeSql, flatParams);
     }
 
     await connection.commit();
