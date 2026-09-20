@@ -99,8 +99,9 @@ export const TaskModal: React.FC<TaskModalProps> = ({
       const now = new Date();
       const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
       setTitle('');
-      setStartTime(toInputDateTime(now.toISOString()));
-      setEndTime(toInputDateTime(nextWeek.toISOString()));
+      // Sử dụng trực tiếp toInputDateTime với Date object để lấy giờ local chuẩn xác
+      setStartTime(toInputDateTime(now.toString()));
+      setEndTime(toInputDateTime(nextWeek.toString()));
       setStatus('TODO');
       setSelectedFormat('Trực tiếp');
       setCustomFormat('');
