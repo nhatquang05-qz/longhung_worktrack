@@ -22,6 +22,16 @@ interface LocalAssignee {
 
 const DEFAULT_FORMATS = ['Trực tiếp', 'Online', 'Email', 'Văn bản'];
 
+const formatLocalDateToInput = (d: Date): string => {
+  const pad = (n: number) => n.toString().padStart(2, '0');
+  const year = d.getFullYear();
+  const month = pad(d.getMonth() + 1);
+  const day = pad(d.getDate());
+  const hours = pad(d.getHours());
+  const minutes = pad(d.getMinutes());
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
+
 export const TaskModal: React.FC<TaskModalProps> = ({
   isOpen,
   taskToEdit,
@@ -99,9 +109,8 @@ export const TaskModal: React.FC<TaskModalProps> = ({
       const now = new Date();
       const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
       setTitle('');
-      // Sử dụng trực tiếp toInputDateTime với Date object để lấy giờ local chuẩn xác
-      setStartTime(toInputDateTime(now.toString()));
-      setEndTime(toInputDateTime(nextWeek.toString()));
+      setStartTime(formatLocalDateToInput(now));
+      setEndTime(formatLocalDateToInput(nextWeek));
       setStatus('TODO');
       setSelectedFormat('Trực tiếp');
       setCustomFormat('');
