@@ -20,7 +20,7 @@ interface LocalAssignee {
   isAccount: boolean;
 }
 
-const DEFAULT_FORMATS = ['Trực tiếp', 'Online', 'Email', 'Văn bản'];
+const DEFAULT_FORMATS = ['Trực tiếp', 'Online', 'Email', 'Văn bản điện tử'];
 
 const formatLocalDateToInput = (d: Date): string => {
   const pad = (n: number) => n.toString().padStart(2, '0');
