@@ -1,5 +1,5 @@
 import React from 'react';
-import { ExternalLink, Edit3, Trash2, AlertTriangle, Clock } from 'lucide-react';
+import { ExternalLink, Edit3, Trash2, AlertTriangle, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
 import { TaskItem, TaskStatus } from '../../types/task';
 import { formatDateTime, checkDeadlineStatus } from '../../utils/dateUtils';
 import { AssigneeBadgeList } from './AssigneeBadgeList';
@@ -11,7 +11,10 @@ interface TaskTableProps {
   tasks: TaskItem[];
   page: number;
   limit: number;
+  total?: number;
+  totalPages?: number;
   loading: boolean;
+  onPageChange?: (newPage: number) => void;
   onEdit: (task: TaskItem) => void;
   onDelete: (task: TaskItem) => void;
   onSelectTask?: (task: TaskItem) => void;
@@ -21,7 +24,10 @@ export const TaskTable: React.FC<TaskTableProps> = ({
   tasks,
   page,
   limit,
+  total = 0,
+  totalPages = 1,
   loading,
+  onPageChange,
   onEdit,
   onDelete,
   onSelectTask,
@@ -72,7 +78,30 @@ export const TaskTable: React.FC<TaskTableProps> = ({
     return null;
   };
 
-  // Xác định màu nền của từng dòng theo trạng thái và hạn công việc
+  const renderFormatBadges = (formatStr?: string | null) => {
+    if (!formatStr || !formatStr.trim()) {
+      return <span className="text-xs text-slate-400 italic">-</span>;
+    }
+
+    const formats = formatStr
+      .split(',')
+      .map((f) => f.trim())
+      .filter(Boolean);
+
+    return (
+      <div className="flex flex-wrap gap-1 justify-center items-center max-w-[180px] mx-auto">
+        {formats.map((item, idx) => (
+          <span
+            key={idx}
+            className="inline-block px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300 border border-purple-200 dark:border-purple-800 text-[11px] font-medium leading-tight shadow-2xs whitespace-nowrap"
+          >
+            {item}
+          </span>
+        ))}
+      </div>
+    );
+  };
+
   const getRowColorClasses = (task: TaskItem) => {
     if (task.status === 'COMPLETED') {
       return {
@@ -97,7 +126,6 @@ export const TaskTable: React.FC<TaskTableProps> = ({
       };
     }
 
-    // Chưa tới hạn: Nền trắng bình thường
     return {
       row: 'bg-white hover:bg-slate-50/80 dark:bg-slate-900 dark:hover:bg-slate-800/50',
       stickyAction: 'bg-white group-hover:bg-slate-50 dark:bg-slate-900 dark:group-hover:bg-slate-800',
@@ -107,7 +135,6 @@ export const TaskTable: React.FC<TaskTableProps> = ({
   const canModifyTask = (task: TaskItem): boolean => {
     if (!user) return false;
     if (user.isAdmin) return true;
-    // Người tạo công việc hoặc người được phân công đều có quyền sửa/xóa
     return task.createdBy === user.id || task.assignees.some((a) => a.userId === user.id);
   };
 
@@ -131,9 +158,9 @@ export const TaskTable: React.FC<TaskTableProps> = ({
   }
 
   return (
-    <div className="border border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-900 overflow-hidden shadow-sm">
+    <div className="border border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-900 overflow-hidden shadow-sm flex flex-col">
       <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse text-sm min-w-[1100px]">
+        <table className="w-full text-left border-collapse text-sm min-w-[1150px]">
           <thead>
             <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-300 font-semibold text-xs uppercase tracking-wider">
               <th className="py-3 px-3 w-12 text-center">STT</th>
@@ -144,7 +171,7 @@ export const TaskTable: React.FC<TaskTableProps> = ({
               <th className="py-3 px-3 text-center min-w-[110px]">Tiến độ</th>
               <th className="py-3 px-3 min-w-[130px] text-left">Ngày hoàn thành</th>
               <th className="py-3 px-3 min-w-[130px] text-left">Người nộp</th>
-              <th className="py-3 px-3 text-center min-w-[90px]">Hình thức</th>
+              <th className="py-3 px-3 text-center min-w-[140px]">Hình thức</th>
               <th className="py-3 px-3 text-center min-w-[110px]">Đính kèm</th>
               <th className="py-3 px-4 min-w-[150px] text-left">Ghi chú</th>
               <th className="py-3 px-3 text-right sticky right-0 bg-slate-50 dark:bg-slate-800/80 w-20">Thao tác</th>
@@ -189,10 +216,8 @@ export const TaskTable: React.FC<TaskTableProps> = ({
                   <td className="py-3 px-3 text-left text-xs font-medium text-slate-700 dark:text-slate-200">
                     {task.submitterName || <span className="text-slate-400 italic">-</span>}
                   </td>
-                  <td className="py-3 px-3 text-center text-xs text-slate-600 dark:text-slate-300">
-                    <span className="px-2 py-0.5 rounded bg-white/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700 font-medium shadow-2xs">
-                      {task.format}
-                    </span>
+                  <td className="py-3 px-3 text-center">
+                    {renderFormatBadges(task.format)}
                   </td>
                   <td className="py-3 px-3 text-center" onClick={(e) => e.stopPropagation()}>
                     {task.driveUrl ? (
@@ -243,6 +268,43 @@ export const TaskTable: React.FC<TaskTableProps> = ({
           </tbody>
         </table>
       </div>
+
+      {/* Thanh phân trang Pagination */}
+      {totalPages > 1 && onPageChange && (
+        <div className="px-4 py-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 flex items-center justify-between">
+          <div className="text-xs text-slate-500 dark:text-slate-400">
+            Hiển thị <span className="font-semibold text-slate-700 dark:text-slate-200">{(page - 1) * limit + 1}</span> -{' '}
+            <span className="font-semibold text-slate-700 dark:text-slate-200">
+              {Math.min(page * limit, total || tasks.length)}
+            </span>{' '}
+            trong tổng số <span className="font-semibold text-slate-700 dark:text-slate-200">{total || tasks.length}</span> công việc
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={() => onPageChange(page - 1)}
+              disabled={page <= 1}
+              className="p-1.5 rounded-lg border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition"
+              title="Trang trước"
+            >
+              <ChevronLeft size={16} />
+            </button>
+
+            <span className="text-xs text-slate-600 dark:text-slate-300 px-2 font-medium">
+              Trang {page} / {totalPages}
+            </span>
+
+            <button
+              onClick={() => onPageChange(page + 1)}
+              disabled={page >= totalPages}
+              className="p-1.5 rounded-lg border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition"
+              title="Trang sau"
+            >
+              <ChevronRight size={16} />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

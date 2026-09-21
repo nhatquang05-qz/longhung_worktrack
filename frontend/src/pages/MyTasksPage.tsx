@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Plus, ChevronLeft, ChevronRight, AlertCircle } from 'lucide-react';
+import { Plus, AlertCircle } from 'lucide-react';
 import api from '../services/api';
 import { TaskItem, TaskPagination } from '../types/task';
 import { TaskTable } from '../components/tasks/TaskTable';
@@ -116,7 +116,10 @@ const MyTasksPage: React.FC = () => {
   };
 
   const canEditDetailTask = Boolean(
-    detailTask && (user?.isAdmin || detailTask.assignees.some((a) => a.userId === user?.id))
+    detailTask &&
+      (user?.isAdmin ||
+        detailTask.createdBy === user?.id ||
+        detailTask.assignees.some((a) => a.userId === user?.id))
   );
 
   return (
@@ -171,7 +174,10 @@ const MyTasksPage: React.FC = () => {
         tasks={tasks}
         page={pagination.page}
         limit={pagination.limit}
+        total={pagination.total}
+        totalPages={pagination.totalPages}
         loading={loading}
+        onPageChange={(newPage) => setPagination((p) => ({ ...p, page: newPage }))}
         onSelectTask={(task) => setDetailTask(task)}
         onEdit={(task) => {
           setEditingTask(task);
@@ -179,30 +185,6 @@ const MyTasksPage: React.FC = () => {
         }}
         onDelete={(task) => setDeletingTask(task)}
       />
-
-      {pagination.totalPages > 1 && (
-        <div className="flex items-center justify-between text-sm text-slate-500 dark:text-slate-400 pt-2">
-          <div>
-            Hiển thị trang {pagination.page} trên tổng số {pagination.totalPages} ({pagination.total} công việc)
-          </div>
-          <div className="flex items-center space-x-2">
-            <button
-              disabled={pagination.page <= 1}
-              onClick={() => setPagination((p) => ({ ...p, page: p.page - 1 }))}
-              className="p-2 rounded-lg border border-slate-200 dark:border-slate-800 disabled:opacity-40 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
-            >
-              <ChevronLeft size={16} />
-            </button>
-            <button
-              disabled={pagination.page >= pagination.totalPages}
-              onClick={() => setPagination((p) => ({ ...p, page: p.page + 1 }))}
-              className="p-2 rounded-lg border border-slate-200 dark:border-slate-800 disabled:opacity-40 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
-            >
-              <ChevronRight size={16} />
-            </button>
-          </div>
-        </div>
-      )}
 
       <TaskDetailModal
         task={detailTask}

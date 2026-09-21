@@ -1,13 +1,28 @@
 import React from 'react';
 import { History, PlusCircle, Edit3, Trash2, ArrowRight } from 'lucide-react';
 import { TaskActivity } from '../../types/activity';
-import { formatDateTime } from '../../utils/dateUtils';
 
 interface ActivityLogCardProps {
   activities: TaskActivity[];
   loading: boolean;
   onSelectActivity?: (activity: TaskActivity) => void;
 }
+
+const formatActivityTime = (dateStr: string | null | undefined): string => {
+  if (!dateStr) return '-';
+
+  const clean = dateStr.replace('T', ' ').replace('Z', '');
+  const match = clean.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/);
+  if (match) {
+    const [, y, m, d, hh, mm] = match;
+    return `${hh}:${mm} ${d}/${m}/${y}`;
+  }
+
+  const dObj = new Date(dateStr);
+  if (isNaN(dObj.getTime())) return '-';
+  const pad = (n: number) => n.toString().padStart(2, '0');
+  return `${pad(dObj.getHours())}:${pad(dObj.getMinutes())} ${pad(dObj.getDate())}/${pad(dObj.getMonth() + 1)}/${dObj.getFullYear()}`;
+};
 
 export const ActivityLogCard: React.FC<ActivityLogCardProps> = ({
   activities,
@@ -79,7 +94,7 @@ export const ActivityLogCard: React.FC<ActivityLogCardProps> = ({
                     {item.user_name}
                   </span>
                   <span className="text-[11px] text-slate-400">
-                    {formatDateTime(item.created_at)}
+                    {formatActivityTime(item.created_at)}
                   </span>
                 </div>
                 <p className="font-medium text-slate-900 dark:text-slate-100 truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition">

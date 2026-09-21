@@ -1,10 +1,10 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { Plus } from 'lucide-react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import { Plus, X } from 'lucide-react';
 import api from '../services/api';
 import { DashboardStats } from '../types/dashboard';
 import { TaskItem, TaskPagination } from '../types/task';
 import { TaskActivity } from '../types/activity';
-import { DashboardHeroStats } from '../components/dashboard/DashboardHeroStats';
+import { DashboardHeroStats, StatFilterType } from '../components/dashboard/DashboardHeroStats';
 import { TaskTable } from '../components/tasks/TaskTable';
 import { TaskModal } from '../components/tasks/TaskModal';
 import { TaskDetailModal } from '../components/tasks/TaskDetailModal';
@@ -13,6 +13,7 @@ import { DateFilterBar, TaskFilterParams } from '../components/dashboard/DateFil
 import { ActivityLogCard } from '../components/dashboard/ActivityLogCard';
 import { ActivityDiffModal } from '../components/dashboard/ActivityDiffModal';
 import { calculatePresetDates } from '../utils/filterUtils';
+import { checkDeadlineStatus } from '../utils/dateUtils';
 import { useAuth } from '../contexts/AuthContext';
 
 const defaultFilters: TaskFilterParams = {
@@ -40,7 +41,9 @@ const HomePage: React.FC = () => {
   const [activities, setActivities] = useState<TaskActivity[]>([]);
   const [activityLoading, setActivityLoading] = useState(false);
 
-  // State xem đối chiếu lịch sử
+  // State nhận diện thẻ thống kê đang được click
+  const [statFilter, setStatFilter] = useState<StatFilterType>('ALL');
+
   const [selectedActivity, setSelectedActivity] = useState<TaskActivity | null>(null);
 
   const [pagination, setPagination] = useState<TaskPagination>({
@@ -128,9 +131,12 @@ const HomePage: React.FC = () => {
   const fetchTasks = useCallback(async () => {
     setLoading(true);
     try {
+      // Khi lọc theo Quá hạn hoặc Gấp 24h, tải nhiều task hơn (limit: 50) để kiểm tra deadline chuẩn xác
+      const fetchLimit = statFilter === 'OVERDUE' || statFilter === 'WARNING' ? '50' : pagination.limit.toString();
+      
       const params = new URLSearchParams({
         page: pagination.page.toString(),
-        limit: pagination.limit.toString(),
+        limit: fetchLimit,
         timeField: filters.timeField,
       });
 
@@ -157,7 +163,7 @@ const HomePage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [pagination.page, pagination.limit, filters.timeField, filters.search, filters.status, filters.assigneeId, getDateParams]);
+  }, [pagination.page, pagination.limit, filters.timeField, filters.search, filters.status, filters.assigneeId, getDateParams, statFilter]);
 
   useEffect(() => {
     fetchStats();
@@ -177,9 +183,55 @@ const HomePage: React.FC = () => {
     fetchActivities();
   };
 
+  // Xử lý khi bấm vào từng ô thống kê
+  const handleSelectStatFilter = (type: StatFilterType) => {
+    setStatFilter(type);
+    setPagination((p) => ({ ...p, page: 1 }));
+
+    if (type === 'IN_PROGRESS' || type === 'TODO' || type === 'COMPLETED') {
+      setFilters((prev) => ({ ...prev, status: type }));
+    } else if (type === 'ALL') {
+      setFilters((prev) => ({ ...prev, status: '' }));
+    } else {
+      // OVERDUE hoặc WARNING thì bỏ lọc status cụ thể để quét các task chưa hoàn thành
+      setFilters((prev) => ({ ...prev, status: '' }));
+    }
+  };
+
+  // Lọc hiển thị
+  const displayedTasks = useMemo(() => {
+    if (statFilter === 'OVERDUE') {
+      return tasks.filter((task) => checkDeadlineStatus(task.endTime, task.status) === 'OVERDUE');
+    }
+    if (statFilter === 'WARNING') {
+      return tasks.filter((task) => checkDeadlineStatus(task.endTime, task.status) === 'WARNING');
+    }
+    return tasks;
+  }, [tasks, statFilter]);
+
   const canEditDetailTask = Boolean(
-    detailTask && (user?.isAdmin || detailTask.assignees.some((a) => a.userId === user?.id))
+    detailTask &&
+      (user?.isAdmin ||
+        detailTask.createdBy === user?.id ||
+        detailTask.assignees.some((a) => a.userId === user?.id))
   );
+
+  const getStatFilterLabel = (type: StatFilterType) => {
+    switch (type) {
+      case 'OVERDUE':
+        return 'Quá hạn';
+      case 'WARNING':
+        return 'Gấp trong 24h';
+      case 'IN_PROGRESS':
+        return 'Đang làm';
+      case 'TODO':
+        return 'Chưa làm';
+      case 'COMPLETED':
+        return 'Đã hoàn thành';
+      default:
+        return '';
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -205,12 +257,18 @@ const HomePage: React.FC = () => {
         </button>
       </div>
 
-      <DashboardHeroStats stats={stats} />
+      {/* Truyền đầy đủ selectedFilter và onSelectFilter vào DashboardHeroStats */}
+      <DashboardHeroStats
+        stats={stats}
+        selectedFilter={statFilter}
+        onSelectFilter={handleSelectStatFilter}
+      />
 
       <DateFilterBar
         filters={filters}
         onChange={(newFilters) => {
           setFilters(newFilters);
+          setStatFilter('ALL');
           setPagination((p) => ({ ...p, page: 1 }));
         }}
         showAssigneeFilter={true}
@@ -218,19 +276,39 @@ const HomePage: React.FC = () => {
 
       <div className="space-y-2">
         <div className="flex items-center justify-between px-1">
-          <h3 className="font-semibold text-slate-800 dark:text-slate-200 text-base">
-            Danh sách công việc
-          </h3>
+          <div className="flex items-center space-x-2">
+            <h3 className="font-semibold text-slate-800 dark:text-slate-200 text-base">
+              Danh sách công việc
+            </h3>
+            {statFilter !== 'ALL' && (
+              <span className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                <span>Đang lọc: <strong>{getStatFilterLabel(statFilter)}</strong></span>
+                <button
+                  type="button"
+                  onClick={() => handleSelectStatFilter('ALL')}
+                  className="hover:text-blue-900 dark:hover:text-white"
+                  title="Hủy lọc"
+                >
+                  <X size={12} />
+                </button>
+              </span>
+            )}
+          </div>
           <span className="text-xs text-slate-400">
-            Tổng cộng: {pagination.total} công việc (Click vào dòng để xem chi tiết)
+            {statFilter === 'OVERDUE' || statFilter === 'WARNING'
+              ? `Tìm thấy ${displayedTasks.length} công việc`
+              : `Tổng cộng: ${pagination.total} công việc (Click vào dòng để xem chi tiết)`}
           </span>
         </div>
 
         <TaskTable
-          tasks={tasks}
+          tasks={displayedTasks}
           page={pagination.page}
           limit={pagination.limit}
+          total={statFilter === 'OVERDUE' || statFilter === 'WARNING' ? displayedTasks.length : pagination.total}
+          totalPages={statFilter === 'OVERDUE' || statFilter === 'WARNING' ? 1 : pagination.totalPages}
           loading={loading}
+          onPageChange={(newPage) => setPagination((p) => ({ ...p, page: newPage }))}
           onSelectTask={(task) => setDetailTask(task)}
           onEdit={(task) => {
             setEditingTask(task);
@@ -240,7 +318,7 @@ const HomePage: React.FC = () => {
         />
       </div>
 
-      {/* Nhật ký thao tác (click để mở modal đối chiếu) */}
+      {/* Nhật ký thao tác */}
       <ActivityLogCard
         activities={activities}
         loading={activityLoading}
