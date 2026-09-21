@@ -8,20 +8,23 @@ interface ActivityLogCardProps {
   onSelectActivity?: (activity: TaskActivity) => void;
 }
 
-const formatActivityTime = (dateStr: string | null | undefined): string => {
+const formatActivityTimeWithOffset = (dateStr: string | null | undefined): string => {
   if (!dateStr) return '-';
 
-  const clean = dateStr.replace('T', ' ').replace('Z', '');
-  const match = clean.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/);
-  if (match) {
-    const [, y, m, d, hh, mm] = match;
-    return `${hh}:${mm} ${d}/${m}/${y}`;
-  }
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return '-';
 
-  const dObj = new Date(dateStr);
-  if (isNaN(dObj.getTime())) return '-';
+  // Cộng thêm 7 tiếng để bù múi giờ UTC của Vercel
+  const targetDate = new Date(d.getTime() + 7 * 60 * 60 * 1000);
+
   const pad = (n: number) => n.toString().padStart(2, '0');
-  return `${pad(dObj.getHours())}:${pad(dObj.getMinutes())} ${pad(dObj.getDate())}/${pad(dObj.getMonth() + 1)}/${dObj.getFullYear()}`;
+  const hh = pad(targetDate.getUTCHours());
+  const mm = pad(targetDate.getUTCMinutes());
+  const day = pad(targetDate.getUTCDate());
+  const month = pad(targetDate.getUTCMonth() + 1);
+  const year = targetDate.getUTCFullYear();
+
+  return `${hh}:${mm} ${day}/${month}/${year}`;
 };
 
 export const ActivityLogCard: React.FC<ActivityLogCardProps> = ({
@@ -94,7 +97,7 @@ export const ActivityLogCard: React.FC<ActivityLogCardProps> = ({
                     {item.user_name}
                   </span>
                   <span className="text-[11px] text-slate-400">
-                    {formatActivityTime(item.created_at)}
+                    {formatActivityTimeWithOffset(item.created_at)}
                   </span>
                 </div>
                 <p className="font-medium text-slate-900 dark:text-slate-100 truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition">
