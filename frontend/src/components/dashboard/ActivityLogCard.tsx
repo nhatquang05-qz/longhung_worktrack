@@ -11,20 +11,34 @@ interface ActivityLogCardProps {
 const formatActivityTimeWithOffset = (dateStr: string | null | undefined): string => {
   if (!dateStr) return '-';
 
-  const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return '-';
+  const clean = dateStr.replace('T', ' ').replace('Z', '');
+  const match = clean.match(/(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2})/);
 
-  // Cộng thêm 7 tiếng để bù múi giờ UTC của Vercel
-  const targetDate = new Date(d.getTime() + 7 * 60 * 60 * 1000);
+  if (match) {
+    const [, y, m, d, hh, mm] = match;
+    let hour = parseInt(hh, 10) + 7;
+    let day = parseInt(d, 10);
+    let month = parseInt(m, 10);
+    let year = parseInt(y, 10);
 
+    if (hour >= 24) {
+      hour -= 24;
+      day += 1;
+      const overflowDate = new Date(year, month - 1, day);
+      day = overflowDate.getDate();
+      month = overflowDate.getMonth() + 1;
+      year = overflowDate.getFullYear();
+    }
+
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    return `${pad(hour)}:${mm} ${pad(day)}/${pad(month)}/${year}`;
+  }
+
+  const dObj = new Date(dateStr);
+  if (isNaN(dObj.getTime())) return dateStr;
+  const targetDate = new Date(dObj.getTime() + 7 * 60 * 60 * 1000);
   const pad = (n: number) => n.toString().padStart(2, '0');
-  const hh = pad(targetDate.getUTCHours());
-  const mm = pad(targetDate.getUTCMinutes());
-  const day = pad(targetDate.getUTCDate());
-  const month = pad(targetDate.getUTCMonth() + 1);
-  const year = targetDate.getUTCFullYear();
-
-  return `${hh}:${mm} ${day}/${month}/${year}`;
+  return `${pad(targetDate.getUTCHours())}:${pad(targetDate.getUTCMinutes())} ${pad(targetDate.getUTCDate())}/${pad(targetDate.getUTCMonth() + 1)}/${targetDate.getUTCFullYear()}`;
 };
 
 export const ActivityLogCard: React.FC<ActivityLogCardProps> = ({
