@@ -163,7 +163,11 @@ export const findTasksWithPagination = async (filters = {}, onlyAssignedUserId =
     FROM tasks t
     LEFT JOIN users u ON t.created_by = u.id
     ${whereSQL}
-    ORDER BY t.created_at DESC, t.id DESC
+    ORDER BY 
+      CASE WHEN t.status = 'COMPLETED' THEN 1 ELSE 0 END ASC,
+      CASE WHEN t.status != 'COMPLETED' THEN t.end_time END ASC,
+      t.completed_at DESC,
+      t.id DESC
     LIMIT ${limitNum} OFFSET ${offset}
   `;
 
