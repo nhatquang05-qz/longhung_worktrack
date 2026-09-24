@@ -51,15 +51,15 @@ export const getDashboardStats = async (filters = {}, userId = null) => {
       COUNT(
         CASE 
           WHEN t.status != 'COMPLETED' 
-               AND t.end_time >= NOW() 
-               AND t.end_time <= DATE_ADD(NOW(), INTERVAL 24 HOUR) 
+               AND t.end_time >= DATE_ADD(UTC_TIMESTAMP(), INTERVAL 7 HOUR) 
+               AND t.end_time <= DATE_ADD(DATE_ADD(UTC_TIMESTAMP(), INTERVAL 7 HOUR), INTERVAL 24 HOUR) 
           THEN 1 
         END
       ) AS warning_count,
       COUNT(
         CASE 
           WHEN t.status != 'COMPLETED' 
-               AND t.end_time < NOW() 
+               AND t.end_time < DATE_ADD(UTC_TIMESTAMP(), INTERVAL 7 HOUR) 
           THEN 1 
         END
       ) AS overdue_count
