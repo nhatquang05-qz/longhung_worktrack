@@ -49,10 +49,10 @@ const VietDateInput: React.FC<{
 
   return (
     <div className="flex items-center space-x-2">
-      <span className="text-slate-500 font-medium shrink-0">{label}</span>
+      <span className="text-slate-500 font-medium shrink-0 text-xs">{label}</span>
       <div
         onClick={handleContainerClick}
-        className="relative flex items-center px-2.5 py-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-md cursor-pointer hover:border-blue-400 dark:hover:border-blue-500 transition text-xs"
+        className="relative flex items-center px-2.5 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg cursor-pointer hover:border-blue-400 dark:hover:border-blue-500 transition text-xs flex-1 sm:flex-none justify-between sm:justify-start"
       >
         <span
           className={`font-mono ${
@@ -148,20 +148,21 @@ export const DateFilterBar: React.FC<DateFilterBarProps> = ({
   const presetDesc = getPresetDescription(filters.preset);
 
   return (
-    <div className="space-y-3 bg-white dark:bg-slate-900 p-4 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm">
+    <div className="space-y-3 bg-white dark:bg-slate-900 p-3.5 sm:p-4 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm">
       {/* Hàng 1: Preset Buttons & Time field */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center space-x-1 overflow-x-auto">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-3">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+          {/* Cuộn ngang trên mobile */}
+          <div className="flex items-center space-x-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
             {presets.map((p) => (
               <button
                 key={p.id}
                 type="button"
                 onClick={() => update({ preset: p.id })}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition shrink-0 ${
                   filters.preset === p.id
                     ? 'bg-blue-600 text-white shadow-sm'
-                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 bg-slate-50 sm:bg-transparent dark:bg-slate-800/60 sm:dark:bg-transparent'
                 }`}
               >
                 {p.label}
@@ -172,18 +173,20 @@ export const DateFilterBar: React.FC<DateFilterBarProps> = ({
           {presetDesc && (
             <div className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-md bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800/80 text-[11px] font-medium animate-in fade-in duration-200">
               <Info size={13} className="shrink-0 text-blue-500" />
-              <span>{presetDesc}</span>
+              <span className="truncate">{presetDesc}</span>
             </div>
           )}
         </div>
 
-        <div className="flex items-center space-x-2 text-xs text-slate-500 dark:text-slate-400">
-          <Calendar size={14} />
-          <span>Lọc theo:</span>
+        <div className="flex items-center justify-between sm:justify-start space-x-2 text-xs text-slate-500 dark:text-slate-400 pt-1 sm:pt-0">
+          <div className="flex items-center space-x-1.5">
+            <Calendar size={14} />
+            <span>Lọc theo:</span>
+          </div>
           <select
             value={filters.timeField}
             onChange={(e) => update({ timeField: e.target.value as any })}
-            className="px-2 py-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md text-xs focus:outline-none dark:text-slate-100 font-medium"
+            className="px-2.5 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs focus:outline-none dark:text-slate-100 font-medium"
           >
             <option value="end_time">Thời hạn (Deadline)</option>
             <option value="start_time">Ngày bắt đầu</option>
@@ -191,9 +194,9 @@ export const DateFilterBar: React.FC<DateFilterBarProps> = ({
         </div>
       </div>
 
-      {/* Hàng 2: Chọn khoảng ngày tự do */}
+      {/* Hàng 2: Chọn khoảng ngày tùy chọn */}
       {filters.preset === 'CUSTOM' && (
-        <div className="flex flex-wrap items-center gap-4 p-2.5 bg-slate-50 dark:bg-slate-800/50 rounded-lg text-xs border border-slate-200 dark:border-slate-700 animate-in fade-in duration-150">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl text-xs border border-slate-200 dark:border-slate-700 animate-in fade-in duration-150">
           <VietDateInput
             label="Từ ngày:"
             value={filters.customStart}
@@ -208,43 +211,45 @@ export const DateFilterBar: React.FC<DateFilterBarProps> = ({
       )}
 
       {/* Hàng 3: Ô tìm kiếm + Lọc trạng thái + Lọc thành viên */}
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="relative flex-1 min-w-[220px]">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+        <div className="relative flex-1">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
             value={filters.search}
             onChange={(e) => update({ search: e.target.value })}
             placeholder="Tìm theo tên công việc, người thực hiện, người nộp..."
-            className="w-full pl-9 pr-3 py-1.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-slate-100"
+            className="w-full pl-9 pr-3 py-2 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-slate-100"
           />
         </div>
 
-        <select
-          value={filters.status}
-          onChange={(e) => update({ status: e.target.value })}
-          className="px-3 py-1.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-slate-100"
-        >
-          <option value="">-- Tất cả trạng thái --</option>
-          <option value="TODO">Chưa làm</option>
-          <option value="IN_PROGRESS">Đang làm</option>
-          <option value="COMPLETED">Đã hoàn thành</option>
-        </select>
-
-        {showAssigneeFilter && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
           <select
-            value={filters.assigneeId}
-            onChange={(e) => update({ assigneeId: e.target.value })}
-            className="px-3 py-1.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-slate-100"
+            value={filters.status}
+            onChange={(e) => update({ status: e.target.value })}
+            className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-slate-100"
           >
-            <option value="">-- Tất cả thành viên --</option>
-            {availableUsers.map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.fullName}
-              </option>
-            ))}
+            <option value="">-- Tất cả trạng thái --</option>
+            <option value="TODO">Chưa làm</option>
+            <option value="IN_PROGRESS">Đang làm</option>
+            <option value="COMPLETED">Đã hoàn thành</option>
           </select>
-        )}
+
+          {showAssigneeFilter && (
+            <select
+              value={filters.assigneeId}
+              onChange={(e) => update({ assigneeId: e.target.value })}
+              className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-slate-100"
+            >
+              <option value="">-- Tất cả thành viên --</option>
+              {availableUsers.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.fullName}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
       </div>
     </div>
   );

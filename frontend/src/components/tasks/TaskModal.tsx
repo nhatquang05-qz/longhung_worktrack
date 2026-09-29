@@ -44,7 +44,6 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   const [endTime, setEndTime] = useState('');
   const [status, setStatus] = useState<TaskStatus>('TODO');
 
-  // State đa chọn cho hình thức
   const [selectedFormats, setSelectedFormats] = useState<string[]>(['Trực tiếp']);
   const [formatDropdownVal, setFormatDropdownVal] = useState('');
   const [customFormatInput, setCustomFormatInput] = useState('');
@@ -87,7 +86,6 @@ export const TaskModal: React.FC<TaskModalProps> = ({
       setEndTime(toInputDateTime(taskToEdit.endTime));
       setStatus(taskToEdit.status);
 
-      // Phân tách chuỗi hình thức đã lưu trong DB thành danh sách mảng
       if (taskToEdit.format) {
         const parsed = taskToEdit.format
           .split(',')
@@ -266,23 +264,25 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm overflow-y-auto">
-      <div className="w-full max-w-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl overflow-hidden my-6">
-        <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
-          <h3 className="font-bold text-slate-800 dark:text-slate-100 text-lg">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/60 backdrop-blur-xs transition-opacity">
+      <div className="w-full sm:max-w-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col max-h-[92vh] sm:max-h-[85vh] overflow-hidden">
+        {/* Sticky Header */}
+        <div className="px-4 sm:px-6 py-3.5 sm:py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-white dark:bg-slate-900 shrink-0">
+          <h3 className="font-bold text-slate-800 dark:text-slate-100 text-base sm:text-lg">
             {taskToEdit ? 'Chỉnh Sửa Công Việc' : 'Tạo Công Việc Mới'}
           </h3>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+            className="p-2 -mr-1 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
           >
-            <X size={18} />
+            <X size={20} />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+        {/* Scrollable Form Content */}
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
           {error && (
-            <div className="flex items-center space-x-2 p-3 text-sm rounded-lg bg-red-50 text-red-700 dark:bg-red-950/50 dark:text-red-400 border border-red-200 dark:border-red-900">
+            <div className="flex items-center space-x-2 p-3 text-xs sm:text-sm rounded-xl bg-red-50 text-red-700 dark:bg-red-950/50 dark:text-red-400 border border-red-200 dark:border-red-900">
               <AlertCircle size={16} className="shrink-0" />
               <span>{error}</span>
             </div>
@@ -298,7 +298,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Nhập tên/nội dung chi tiết của công việc..."
-              className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-slate-100"
+              className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-slate-100"
             />
           </div>
 
@@ -308,14 +308,14 @@ export const TaskModal: React.FC<TaskModalProps> = ({
               Bộ phận thực hiện (Assignees) <span className="text-red-500">*</span>
             </label>
 
-            <div className="min-h-[42px] p-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-lg flex flex-wrap gap-1.5 items-center">
+            <div className="min-h-[44px] p-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl flex flex-wrap gap-1.5 items-center">
               {assignees.length === 0 ? (
-                <span className="text-xs text-slate-400 italic">Chưa có người được phân công</span>
+                <span className="text-xs text-slate-400 italic px-1">Chưa có người được phân công</span>
               ) : (
                 assignees.map((a, idx) => (
                   <span
                     key={idx}
-                    className={`inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-md text-xs font-medium border ${
+                    className={`inline-flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border ${
                       a.isAccount
                         ? 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800'
                         : 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800'
@@ -325,16 +325,16 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                     <button
                       type="button"
                       onClick={() => handleRemoveAssignee(idx)}
-                      className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                      className="p-0.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
                     >
-                      <X size={12} />
+                      <X size={13} />
                     </button>
                   </span>
                 ))
               )}
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
               {!isOtherMode ? (
                 <select
                   value={selectedUserVal}
@@ -346,7 +346,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                       setSelectedUserVal(e.target.value);
                     }
                   }}
-                  className="flex-1 px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-slate-100"
+                  className="flex-1 px-3.5 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-slate-100"
                 >
                   <option value="">-- Chọn thành viên hệ thống --</option>
                   {availableUsers.map((u) => (
@@ -363,7 +363,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                     value={otherNameInput}
                     onChange={(e) => setOtherNameInput(e.target.value)}
                     placeholder="Nhập tên người thực hiện / phòng ban..."
-                    className="flex-1 px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-slate-100"
+                    className="flex-1 px-3.5 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-slate-100"
                   />
                   <button
                     type="button"
@@ -371,7 +371,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                       setIsOtherMode(false);
                       setOtherNameInput('');
                     }}
-                    className="px-2.5 py-2 text-xs text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg"
+                    className="px-3 py-2.5 text-xs text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl shrink-0"
                   >
                     Quay lại
                   </button>
@@ -381,43 +381,43 @@ export const TaskModal: React.FC<TaskModalProps> = ({
               <button
                 type="button"
                 onClick={handleAddAssignee}
-                className="px-3 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold rounded-lg transition inline-flex items-center space-x-1"
+                className="h-10 px-4 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold rounded-xl transition inline-flex items-center justify-center space-x-1 shrink-0"
               >
-                <Plus size={14} />
+                <Plus size={15} />
                 <span>Thêm</span>
               </button>
             </div>
           </div>
 
-          {/* Hình thức thực hiện (Đa chọn tương tự chọn người) */}
+          {/* Hình thức thực hiện */}
           <div className="space-y-2">
             <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
               Hình thức thực hiện <span className="text-red-500">*</span>
             </label>
 
-            <div className="min-h-[42px] p-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-lg flex flex-wrap gap-1.5 items-center">
+            <div className="min-h-[44px] p-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl flex flex-wrap gap-1.5 items-center">
               {selectedFormats.length === 0 ? (
-                <span className="text-xs text-slate-400 italic">Chưa chọn hình thức nào</span>
+                <span className="text-xs text-slate-400 italic px-1">Chưa chọn hình thức nào</span>
               ) : (
                 selectedFormats.map((fmt, idx) => (
                   <span
                     key={idx}
-                    className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-md text-xs font-medium border bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-800"
+                    className="inline-flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-800"
                   >
                     <span>{fmt}</span>
                     <button
                       type="button"
                       onClick={() => handleRemoveFormat(idx)}
-                      className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                      className="p-0.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
                     >
-                      <X size={12} />
+                      <X size={13} />
                     </button>
                   </span>
                 ))
               )}
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
               {!isCustomFormatMode ? (
                 <select
                   value={formatDropdownVal}
@@ -429,7 +429,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                       setFormatDropdownVal(e.target.value);
                     }
                   }}
-                  className="flex-1 px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-slate-100"
+                  className="flex-1 px-3.5 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-slate-100"
                 >
                   <option value="">-- Chọn hình thức --</option>
                   {DEFAULT_FORMATS.map((f) => (
@@ -445,8 +445,8 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                     type="text"
                     value={customFormatInput}
                     onChange={(e) => setCustomFormatInput(e.target.value)}
-                    placeholder="Nhập hình thức cụ thể (ví dụ: Zalo, Họp giao ban, SMS...)..."
-                    className="flex-1 px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-slate-100"
+                    placeholder="Nhập hình thức (Zalo, Họp, SMS...)..."
+                    className="flex-1 px-3.5 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-slate-100"
                   />
                   <button
                     type="button"
@@ -454,7 +454,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                       setIsCustomFormatMode(false);
                       setCustomFormatInput('');
                     }}
-                    className="px-2.5 py-2 text-xs text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg"
+                    className="px-3 py-2.5 text-xs text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl shrink-0"
                   >
                     Quay lại
                   </button>
@@ -464,9 +464,9 @@ export const TaskModal: React.FC<TaskModalProps> = ({
               <button
                 type="button"
                 onClick={handleAddFormat}
-                className="px-3 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold rounded-lg transition inline-flex items-center space-x-1"
+                className="h-10 px-4 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold rounded-xl transition inline-flex items-center justify-center space-x-1 shrink-0"
               >
-                <Plus size={14} />
+                <Plus size={15} />
                 <span>Thêm</span>
               </button>
             </div>
@@ -483,7 +483,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
             <select
               value={submitterName}
               onChange={(e) => setSubmitterName(e.target.value)}
-              className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-slate-100"
+              className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-slate-100"
             >
               <option value="">-- Chưa nộp --</option>
               {assignees.map((a, idx) => (
@@ -494,7 +494,8 @@ export const TaskModal: React.FC<TaskModalProps> = ({
             </select>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Thời gian */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                 Thời gian bắt đầu <span className="text-red-500">*</span>
@@ -504,7 +505,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 required
                 value={startTime}
                 onChange={(e) => setStartTime(e.target.value)}
-                className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-slate-100"
+                className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-slate-100"
               />
             </div>
             <div className="space-y-1.5">
@@ -516,7 +517,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 required
                 value={endTime}
                 onChange={(e) => setEndTime(e.target.value)}
-                className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-slate-100"
+                className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-slate-100"
               />
             </div>
           </div>
@@ -528,7 +529,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value as TaskStatus)}
-              className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-slate-100"
+              className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-slate-100"
             >
               <option value="TODO">Chưa làm</option>
               <option value="IN_PROGRESS">Đang làm</option>
@@ -545,7 +546,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
               value={driveUrl}
               onChange={(e) => setDriveUrl(e.target.value)}
               placeholder="https://drive.google.com/..."
-              className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-slate-100"
+              className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-slate-100"
             />
           </div>
 
@@ -558,28 +559,30 @@ export const TaskModal: React.FC<TaskModalProps> = ({
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Nhập lưu ý hoặc hướng dẫn thêm..."
-              className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-slate-100"
+              className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-slate-100"
             />
           </div>
-
-          <div className="flex items-center justify-end space-x-3 pt-4 border-t border-slate-200 dark:border-slate-800">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-lg text-sm font-medium hover:bg-slate-100 dark:hover:bg-slate-800 transition"
-            >
-              Hủy
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold transition disabled:opacity-50 inline-flex items-center space-x-1.5"
-            >
-              <Check size={16} />
-              <span>{loading ? 'Đang lưu...' : taskToEdit ? 'Cập nhật' : 'Tạo mới'}</span>
-            </button>
-          </div>
         </form>
+
+        {/* Sticky Footer */}
+        <div className="px-4 sm:px-6 py-3.5 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/90 flex items-center justify-end space-x-3 shrink-0">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 sm:flex-none px-4 py-2.5 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-sm font-medium hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+          >
+            Hủy
+          </button>
+          <button
+            type="submit"
+            onClick={handleSubmit}
+            disabled={loading}
+            className="flex-1 sm:flex-none px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold transition disabled:opacity-50 inline-flex items-center justify-center space-x-1.5 shadow-sm"
+          >
+            <Check size={16} />
+            <span>{loading ? 'Đang lưu...' : taskToEdit ? 'Cập nhật' : 'Tạo mới'}</span>
+          </button>
+        </div>
       </div>
     </div>
   );

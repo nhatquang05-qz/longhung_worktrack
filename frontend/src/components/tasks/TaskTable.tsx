@@ -1,5 +1,5 @@
 import React from 'react';
-import { ExternalLink, Edit3, Trash2, AlertTriangle, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ExternalLink, Edit3, Trash2, AlertTriangle, Clock, ChevronLeft, ChevronRight, Calendar, User } from 'lucide-react';
 import { TaskItem, TaskStatus } from '../../types/task';
 import { formatDateTime, checkDeadlineStatus } from '../../utils/dateUtils';
 import { AssigneeBadgeList } from './AssigneeBadgeList';
@@ -140,15 +140,15 @@ export const TaskTable: React.FC<TaskTableProps> = ({
 
   if (loading) {
     return (
-      <div className="border border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-900 overflow-hidden shadow-sm">
-        <SkeletonTable rows={6} cols={7} />
+      <div className="border border-slate-200 dark:border-slate-800 rounded-2xl bg-white dark:bg-slate-900 overflow-hidden shadow-sm">
+        <SkeletonTable rows={6} cols={6} />
       </div>
     );
   }
 
   if (tasks.length === 0) {
     return (
-      <div className="border border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-900 overflow-hidden shadow-sm">
+      <div className="border border-slate-200 dark:border-slate-800 rounded-2xl bg-white dark:bg-slate-900 overflow-hidden shadow-sm">
         <EmptyState
           title="Chưa có công việc nào"
           description="Hiện tại không tìm thấy công việc nào phù hợp với điều kiện lọc."
@@ -158,8 +158,114 @@ export const TaskTable: React.FC<TaskTableProps> = ({
   }
 
   return (
-    <div className="border border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-900 overflow-hidden shadow-sm flex flex-col">
-      <div className="overflow-x-auto">
+    <div className="border border-slate-200 dark:border-slate-800 rounded-2xl bg-white dark:bg-slate-900 overflow-hidden shadow-sm flex flex-col">
+      {/* 1. GIAO DIỆN DI ĐỘNG: Card View (Hiện trên Mobile, ẩn trên Desktop) */}
+      <div className="block md:hidden divide-y divide-slate-100 dark:divide-slate-800/80">
+        {tasks.map((task, index) => {
+          const stt = (page - 1) * limit + index + 1;
+          const editable = canModifyTask(task);
+          const deadlineAlert = renderDeadlineWarning(task.endTime, task.status);
+
+          return (
+            <div
+              key={task.id}
+              onClick={() => onSelectTask && onSelectTask(task)}
+              className="p-4 active:bg-slate-50 dark:active:bg-slate-800/60 transition cursor-pointer space-y-3"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex items-start space-x-2">
+                  <span className="text-xs font-mono font-bold text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">
+                    #{stt}
+                  </span>
+                  <h4 className="font-semibold text-slate-900 dark:text-slate-100 text-sm leading-snug">
+                    {task.title}
+                  </h4>
+                </div>
+                <div className="shrink-0">{renderStatusBadge(task.status)}</div>
+              </div>
+
+              {/* Thông tin hạn chót & người nộp */}
+              <div className="grid grid-cols-2 gap-2 text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/40 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800">
+                <div className="space-y-0.5">
+                  <span className="text-[11px] text-slate-400 flex items-center space-x-1">
+                    <Calendar size={12} />
+                    <span>Hạn chót:</span>
+                  </span>
+                  <div className="font-medium text-slate-700 dark:text-slate-200">
+                    {formatDateTime(task.endTime)}
+                  </div>
+                  {deadlineAlert}
+                </div>
+                <div className="space-y-0.5">
+                  <span className="text-[11px] text-slate-400 flex items-center space-x-1">
+                    <User size={12} />
+                    <span>Người nộp:</span>
+                  </span>
+                  <div className="font-medium text-slate-700 dark:text-slate-200 truncate">
+                    {task.submitterName || 'Chưa nộp'}
+                  </div>
+                </div>
+              </div>
+
+              {/* Bộ phận thực hiện & Hình thức */}
+              <div className="space-y-2">
+                <div onClick={(e) => e.stopPropagation()}>
+                  <AssigneeBadgeList assignees={task.assignees} />
+                </div>
+                {task.format && (
+                  <div className="flex items-center space-x-1.5">
+                    {renderFormatBadges(task.format)}
+                  </div>
+                )}
+              </div>
+
+              {/* Footer Card: File đính kèm & Nút sửa/xóa */}
+              <div
+                className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800/60"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {task.driveUrl ? (
+                  <a
+                    href={task.driveUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center space-x-1 text-xs text-blue-600 dark:text-blue-400 font-medium hover:underline p-1"
+                  >
+                    <span>Xem file đính kèm</span>
+                    <ExternalLink size={13} />
+                  </a>
+                ) : (
+                  <span className="text-[11px] text-slate-400 italic">Không có file đính kèm</span>
+                )}
+
+                {editable ? (
+                  <div className="flex items-center space-x-1">
+                    <button
+                      onClick={() => onEdit(task)}
+                      className="p-2 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/40 transition"
+                      title="Chỉnh sửa"
+                    >
+                      <Edit3 size={16} />
+                    </button>
+                    <button
+                      onClick={() => onDelete(task)}
+                      className="p-2 rounded-lg text-slate-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 transition"
+                      title="Xóa"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                ) : (
+                  <span className="text-[11px] text-slate-400 italic">Chỉ xem</span>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* 2. GIAO DIỆN DESKTOP: Bảng Table Ngang Đầy Đủ (Ẩn trên Mobile, hiện trên Máy tính) */}
+      <div className="hidden md:block overflow-x-auto">
         <table className="w-full text-left border-collapse text-sm min-w-[1150px]">
           <thead>
             <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-300 font-semibold text-xs uppercase tracking-wider">
@@ -269,10 +375,10 @@ export const TaskTable: React.FC<TaskTableProps> = ({
         </table>
       </div>
 
-      {/* Thanh phân trang Pagination */}
+      {/* Phân trang Responsive */}
       {totalPages > 1 && onPageChange && (
-        <div className="px-4 py-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 flex items-center justify-between">
-          <div className="text-xs text-slate-500 dark:text-slate-400">
+        <div className="px-4 py-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="text-xs text-slate-500 dark:text-slate-400 text-center sm:text-left">
             Hiển thị <span className="font-semibold text-slate-700 dark:text-slate-200">{(page - 1) * limit + 1}</span> -{' '}
             <span className="font-semibold text-slate-700 dark:text-slate-200">
               {Math.min(page * limit, total || tasks.length)}
@@ -284,20 +390,20 @@ export const TaskTable: React.FC<TaskTableProps> = ({
             <button
               onClick={() => onPageChange(page - 1)}
               disabled={page <= 1}
-              className="p-1.5 rounded-lg border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition"
+              className="p-2 sm:p-1.5 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition"
               title="Trang trước"
             >
               <ChevronLeft size={16} />
             </button>
 
-            <span className="text-xs text-slate-600 dark:text-slate-300 px-2 font-medium">
+            <span className="text-xs text-slate-600 dark:text-slate-300 px-3 font-semibold">
               Trang {page} / {totalPages}
             </span>
 
             <button
               onClick={() => onPageChange(page + 1)}
               disabled={page >= totalPages}
-              className="p-1.5 rounded-lg border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition"
+              className="p-2 sm:p-1.5 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition"
               title="Trang sau"
             >
               <ChevronRight size={16} />

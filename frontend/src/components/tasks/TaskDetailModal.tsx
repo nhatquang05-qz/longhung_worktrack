@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, ExternalLink, Calendar, User, Clock, FileText, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { X, ExternalLink, Calendar, User, Clock, FileText, CheckCircle2, AlertTriangle, Edit3 } from 'lucide-react';
 import { TaskItem } from '../../types/task';
 import { formatDateTime, checkDeadlineStatus } from '../../utils/dateUtils';
 
@@ -21,11 +21,11 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
   const deadlineState = checkDeadlineStatus(task.endTime, task.status);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm overflow-y-auto">
-      <div className="w-full max-w-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl overflow-hidden my-6">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/60 backdrop-blur-xs transition-opacity">
+      <div className="w-full sm:max-w-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col max-h-[92vh] sm:max-h-[85vh] overflow-hidden">
         {/* Header */}
-        <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
-          <div className="flex items-center space-x-2">
+        <div className="px-4 sm:px-6 py-3.5 sm:py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-white dark:bg-slate-900 shrink-0">
+          <div className="flex flex-wrap items-center gap-1.5">
             <span
               className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${
                 task.status === 'COMPLETED'
@@ -57,17 +57,17 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
 
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+            className="p-2 -mr-1 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
           >
-            <X size={18} />
+            <X size={20} />
           </button>
         </div>
 
-        {/* Body */}
-        <div className="p-6 space-y-6 max-h-[75vh] overflow-y-auto text-sm">
+        {/* Scrollable Body */}
+        <div className="p-4 sm:p-6 space-y-5 overflow-y-auto text-sm flex-1">
           {/* Nội dung công việc */}
           <div className="space-y-1">
-            <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 leading-snug">
+            <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100 leading-snug">
               {task.title}
             </h3>
             <p className="text-xs text-slate-400">
@@ -76,7 +76,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
           </div>
 
           {/* Grid thông tin chi tiết */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 text-xs">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 p-3.5 sm:p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 text-xs">
             <div className="space-y-1">
               <span className="text-slate-500 font-medium flex items-center space-x-1">
                 <Calendar size={13} />
@@ -103,14 +103,14 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                 <span>Ngày hoàn thành:</span>
               </span>
               <p className="font-semibold text-slate-800 dark:text-slate-200">
-                {formatDateTime(task.completedAt)}
+                {formatDateTime(task.completedAt) || '-'}
               </p>
             </div>
 
             <div className="space-y-1">
               <span className="text-slate-500 font-medium">Hình thức:</span>
               <p className="font-semibold text-slate-800 dark:text-slate-200">
-                {task.format}
+                {task.format || '-'}
               </p>
             </div>
 
@@ -130,11 +130,11 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
             <h4 className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
               Bộ phận thực hiện ({task.assignees.length})
             </h4>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-1.5 sm:gap-2">
               {task.assignees.map((a, idx) => (
                 <div
                   key={idx}
-                  className={`px-3 py-1.5 rounded-lg border flex items-center space-x-2 text-xs ${
+                  className={`px-3 py-1.5 rounded-lg border flex items-center space-x-1.5 text-xs ${
                     a.isAccount
                       ? 'bg-blue-50 text-blue-800 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800'
                       : 'bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800'
@@ -159,7 +159,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                 href={task.driveUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center space-x-2 px-3.5 py-2 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:hover:bg-blue-900/60 dark:text-blue-300 font-medium text-xs transition border border-blue-200 dark:border-blue-900"
+                className="inline-flex items-center space-x-2 px-3.5 py-2.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:hover:bg-blue-900/60 dark:text-blue-300 font-medium text-xs transition border border-blue-200 dark:border-blue-900 w-full sm:w-auto justify-center"
               >
                 <FileText size={15} />
                 <span>Mở tài liệu Google Drive</span>
@@ -181,12 +181,12 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="px-6 py-3.5 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between">
+        {/* Sticky Footer */}
+        <div className="px-4 sm:px-6 py-3.5 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/90 flex items-center justify-end space-x-3 shrink-0">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-lg text-xs font-medium hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+            className="flex-1 sm:flex-none px-4 py-2.5 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs sm:text-sm font-medium hover:bg-slate-100 dark:hover:bg-slate-800 transition"
           >
             Đóng
           </button>
@@ -198,9 +198,10 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                 onClose();
                 onEdit(task);
               }}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold transition"
+              className="flex-1 sm:flex-none px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs sm:text-sm font-semibold transition inline-flex items-center justify-center space-x-1.5 shadow-sm"
             >
-              Chỉnh sửa công việc
+              <Edit3 size={15} />
+              <span>Chỉnh sửa</span>
             </button>
           )}
         </div>
