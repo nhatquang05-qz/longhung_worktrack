@@ -159,8 +159,8 @@ export const TaskTable: React.FC<TaskTableProps> = ({
 
   return (
     <div className="border border-slate-200 dark:border-slate-800 rounded-2xl bg-white dark:bg-slate-900 overflow-hidden shadow-sm flex flex-col">
-      {/* 1. GIAO DIỆN DI ĐỘNG: Card View (Hiện trên Mobile, ẩn trên Desktop) */}
-      <div className="block md:hidden divide-y divide-slate-100 dark:divide-slate-800/80">
+      {/* 1. GIAO DIỆN DI ĐỘNG: Có khoảng cách tách rời & lề đậm rõ ràng */}
+      <div className="block md:hidden p-3 space-y-3 bg-slate-50/70 dark:bg-slate-950/40">
         {tasks.map((task, index) => {
           const stt = (page - 1) * limit + index + 1;
           const editable = canModifyTask(task);
@@ -170,11 +170,11 @@ export const TaskTable: React.FC<TaskTableProps> = ({
             <div
               key={task.id}
               onClick={() => onSelectTask && onSelectTask(task)}
-              className="p-4 active:bg-slate-50 dark:active:bg-slate-800/60 transition cursor-pointer space-y-3"
+              className="p-3.5 bg-white dark:bg-slate-900 border-2 border-slate-300/80 dark:border-slate-700/80 rounded-xl shadow-xs transition active:bg-slate-50 dark:active:bg-slate-800/60 cursor-pointer space-y-2.5"
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="flex items-start space-x-2">
-                  <span className="text-xs font-mono font-bold text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">
+                  <span className="text-xs font-mono font-bold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700">
                     #{stt}
                   </span>
                   <h4 className="font-semibold text-slate-900 dark:text-slate-100 text-sm leading-snug">
@@ -185,7 +185,7 @@ export const TaskTable: React.FC<TaskTableProps> = ({
               </div>
 
               {/* Thông tin hạn chót & người nộp */}
-              <div className="grid grid-cols-2 gap-2 text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/40 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800">
+              <div className="grid grid-cols-2 gap-2 text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/40 p-2.5 rounded-lg border border-slate-200 dark:border-slate-700/70">
                 <div className="space-y-0.5">
                   <span className="text-[11px] text-slate-400 flex items-center space-x-1">
                     <Calendar size={12} />
@@ -221,7 +221,7 @@ export const TaskTable: React.FC<TaskTableProps> = ({
 
               {/* Footer Card: File đính kèm & Nút sửa/xóa */}
               <div
-                className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800/60"
+                className="flex items-center justify-between pt-2 border-t border-slate-200 dark:border-slate-700/80"
                 onClick={(e) => e.stopPropagation()}
               >
                 {task.driveUrl ? (
@@ -242,17 +242,17 @@ export const TaskTable: React.FC<TaskTableProps> = ({
                   <div className="flex items-center space-x-1">
                     <button
                       onClick={() => onEdit(task)}
-                      className="p-2 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/40 transition"
+                      className="p-1.5 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/40 transition"
                       title="Chỉnh sửa"
                     >
-                      <Edit3 size={16} />
+                      <Edit3 size={15} />
                     </button>
                     <button
                       onClick={() => onDelete(task)}
-                      className="p-2 rounded-lg text-slate-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 transition"
+                      className="p-1.5 rounded-lg text-slate-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 transition"
                       title="Xóa"
                     >
-                      <Trash2 size={16} />
+                      <Trash2 size={15} />
                     </button>
                   </div>
                 ) : (
@@ -264,7 +264,7 @@ export const TaskTable: React.FC<TaskTableProps> = ({
         })}
       </div>
 
-      {/* 2. GIAO DIỆN DESKTOP: Bảng Table Ngang Đầy Đủ (Ẩn trên Mobile, hiện trên Máy tính) */}
+      {/* 2. GIAO DIỆN DESKTOP: Bảng Table Ngang Đầy Đủ */}
       <div className="hidden md:block overflow-x-auto">
         <table className="w-full text-left border-collapse text-sm min-w-[1150px]">
           <thead>
