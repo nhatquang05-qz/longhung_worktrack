@@ -38,19 +38,19 @@ export const TaskTable: React.FC<TaskTableProps> = ({
     switch (status) {
       case 'TODO':
         return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-300 dark:border-slate-600">
             Chưa làm
           </span>
         );
       case 'IN_PROGRESS':
         return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-300 dark:border-blue-700">
             Đang làm
           </span>
         );
       case 'COMPLETED':
         return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-200 border border-emerald-200 dark:border-emerald-700">
+          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-700">
             Đã hoàn thành
           </span>
         );
@@ -93,7 +93,7 @@ export const TaskTable: React.FC<TaskTableProps> = ({
         {formats.map((item, idx) => (
           <span
             key={idx}
-            className="inline-block px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300 border border-purple-200 dark:border-purple-800 text-[11px] font-medium leading-tight shadow-2xs whitespace-nowrap"
+            className="inline-block px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300 border border-purple-300 dark:border-purple-700 text-[11px] font-medium leading-tight shadow-2xs whitespace-nowrap"
           >
             {item}
           </span>
@@ -107,6 +107,8 @@ export const TaskTable: React.FC<TaskTableProps> = ({
       return {
         row: 'bg-emerald-50/60 hover:bg-emerald-100/60 dark:bg-emerald-950/25 dark:hover:bg-emerald-950/40',
         stickyAction: 'bg-emerald-50/95 group-hover:bg-emerald-100/90 dark:bg-[#062419] dark:group-hover:bg-[#083022]',
+        mobileCard: 'bg-emerald-50/70 border-emerald-300 dark:bg-emerald-950/40 dark:border-emerald-800/80',
+        mobileInner: 'bg-emerald-100/50 dark:bg-emerald-900/30 border-emerald-200 dark:border-emerald-800/50',
       };
     }
 
@@ -116,6 +118,8 @@ export const TaskTable: React.FC<TaskTableProps> = ({
       return {
         row: 'bg-rose-50/70 hover:bg-rose-100/70 dark:bg-rose-950/35 dark:hover:bg-rose-950/50',
         stickyAction: 'bg-rose-50/95 group-hover:bg-rose-100/90 dark:bg-[#2b0c10] dark:group-hover:bg-[#381016]',
+        mobileCard: 'bg-rose-50/70 border-rose-300 dark:bg-rose-950/40 dark:border-rose-800/80',
+        mobileInner: 'bg-rose-100/50 dark:bg-rose-900/30 border-rose-200 dark:border-rose-800/50',
       };
     }
 
@@ -123,12 +127,16 @@ export const TaskTable: React.FC<TaskTableProps> = ({
       return {
         row: 'bg-amber-50/70 hover:bg-amber-100/70 dark:bg-amber-950/30 dark:hover:bg-amber-950/45',
         stickyAction: 'bg-amber-50/95 group-hover:bg-amber-100/90 dark:bg-[#2b1b08] dark:group-hover:bg-[#38230a]',
+        mobileCard: 'bg-amber-50/70 border-amber-300 dark:bg-amber-950/40 dark:border-amber-800/80',
+        mobileInner: 'bg-amber-100/50 dark:bg-amber-900/30 border-amber-200 dark:border-amber-800/50',
       };
     }
 
     return {
       row: 'bg-white hover:bg-slate-50/80 dark:bg-slate-900 dark:hover:bg-slate-800/50',
       stickyAction: 'bg-white group-hover:bg-slate-50 dark:bg-slate-900 dark:group-hover:bg-slate-800',
+      mobileCard: 'bg-white border-slate-300 dark:bg-slate-900 dark:border-slate-700/80',
+      mobileInner: 'bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-700/70',
     };
   };
 
@@ -159,22 +167,23 @@ export const TaskTable: React.FC<TaskTableProps> = ({
 
   return (
     <div className="border border-slate-200 dark:border-slate-800 rounded-2xl bg-white dark:bg-slate-900 overflow-hidden shadow-sm flex flex-col">
-      {/* 1. GIAO DIỆN DI ĐỘNG: Có khoảng cách tách rời & lề đậm rõ ràng */}
-      <div className="block md:hidden p-3 space-y-3 bg-slate-50/70 dark:bg-slate-950/40">
+      {/* 1. GIAO DIỆN DI ĐỘNG: Màu nền đỏ, xanh, vàng đồng bộ theo tiến độ */}
+      <div className="block md:hidden p-3 space-y-3 bg-slate-100/60 dark:bg-slate-950/60">
         {tasks.map((task, index) => {
           const stt = (page - 1) * limit + index + 1;
           const editable = canModifyTask(task);
           const deadlineAlert = renderDeadlineWarning(task.endTime, task.status);
+          const colorClasses = getRowColorClasses(task);
 
           return (
             <div
               key={task.id}
               onClick={() => onSelectTask && onSelectTask(task)}
-              className="p-3.5 bg-white dark:bg-slate-900 border-2 border-slate-300/80 dark:border-slate-700/80 rounded-xl shadow-xs transition active:bg-slate-50 dark:active:bg-slate-800/60 cursor-pointer space-y-2.5"
+              className={`p-3.5 border-2 rounded-xl shadow-xs transition active:scale-[0.99] cursor-pointer space-y-2.5 ${colorClasses.mobileCard}`}
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="flex items-start space-x-2">
-                  <span className="text-xs font-mono font-bold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700">
+                  <span className="text-xs font-mono font-bold text-slate-500 dark:text-slate-400 bg-white/80 dark:bg-slate-800 px-1.5 py-0.5 rounded border border-slate-300 dark:border-slate-700 shrink-0">
                     #{stt}
                   </span>
                   <h4 className="font-semibold text-slate-900 dark:text-slate-100 text-sm leading-snug">
@@ -185,24 +194,24 @@ export const TaskTable: React.FC<TaskTableProps> = ({
               </div>
 
               {/* Thông tin hạn chót & người nộp */}
-              <div className="grid grid-cols-2 gap-2 text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/40 p-2.5 rounded-lg border border-slate-200 dark:border-slate-700/70">
+              <div className={`grid grid-cols-2 gap-2 text-xs p-2.5 rounded-lg border ${colorClasses.mobileInner}`}>
                 <div className="space-y-0.5">
-                  <span className="text-[11px] text-slate-400 flex items-center space-x-1">
+                  <span className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center space-x-1">
                     <Calendar size={12} />
                     <span>Hạn chót:</span>
                   </span>
-                  <div className="font-medium text-slate-700 dark:text-slate-200">
+                  <div className="font-semibold text-slate-800 dark:text-slate-200">
                     {formatDateTime(task.endTime)}
                   </div>
                   {deadlineAlert}
                 </div>
                 <div className="space-y-0.5">
-                  <span className="text-[11px] text-slate-400 flex items-center space-x-1">
+                  <span className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center space-x-1">
                     <User size={12} />
                     <span>Người nộp:</span>
                   </span>
-                  <div className="font-medium text-slate-700 dark:text-slate-200 truncate">
-                    {task.submitterName || 'Chưa nộp'}
+                  <div className="font-semibold text-slate-800 dark:text-slate-200 truncate">
+                    {task.submitterName || <span className="italic text-slate-400">Chưa nộp</span>}
                   </div>
                 </div>
               </div>
@@ -221,7 +230,7 @@ export const TaskTable: React.FC<TaskTableProps> = ({
 
               {/* Footer Card: File đính kèm & Nút sửa/xóa */}
               <div
-                className="flex items-center justify-between pt-2 border-t border-slate-200 dark:border-slate-700/80"
+                className="flex items-center justify-between pt-2 border-t border-slate-300/60 dark:border-slate-700/60"
                 onClick={(e) => e.stopPropagation()}
               >
                 {task.driveUrl ? (
@@ -229,7 +238,7 @@ export const TaskTable: React.FC<TaskTableProps> = ({
                     href={task.driveUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center space-x-1 text-xs text-blue-600 dark:text-blue-400 font-medium hover:underline p-1"
+                    className="inline-flex items-center space-x-1 text-xs text-blue-600 dark:text-blue-400 font-semibold hover:underline p-1"
                   >
                     <span>Xem file đính kèm</span>
                     <ExternalLink size={13} />
@@ -239,17 +248,19 @@ export const TaskTable: React.FC<TaskTableProps> = ({
                 )}
 
                 {editable ? (
-                  <div className="flex items-center space-x-1">
+                  <div className="flex items-center space-x-1.5">
                     <button
+                      type="button"
                       onClick={() => onEdit(task)}
-                      className="p-1.5 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/40 transition"
+                      className="p-1.5 rounded-lg text-slate-600 hover:text-blue-600 bg-white/90 dark:bg-slate-800 hover:bg-blue-50 dark:hover:bg-blue-950/60 border border-slate-200 dark:border-slate-700 transition"
                       title="Chỉnh sửa"
                     >
                       <Edit3 size={15} />
                     </button>
                     <button
+                      type="button"
                       onClick={() => onDelete(task)}
-                      className="p-1.5 rounded-lg text-slate-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 transition"
+                      className="p-1.5 rounded-lg text-slate-600 hover:text-red-600 bg-white/90 dark:bg-slate-800 hover:bg-red-50 dark:hover:bg-red-950/60 border border-slate-200 dark:border-slate-700 transition"
                       title="Xóa"
                     >
                       <Trash2 size={15} />
