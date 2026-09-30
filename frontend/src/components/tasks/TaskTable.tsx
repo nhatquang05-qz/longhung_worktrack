@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ExternalLink, Edit3, Trash2, AlertTriangle, Clock, ChevronLeft, ChevronRight, Calendar, User } from 'lucide-react';
 import { TaskItem, TaskStatus } from '../../types/task';
 import { formatDateTime, checkDeadlineStatus } from '../../utils/dateUtils';
@@ -6,6 +6,7 @@ import { AssigneeBadgeList } from './AssigneeBadgeList';
 import { useAuth } from '../../contexts/AuthContext';
 import { SkeletonTable } from '../common/SkeletonTable';
 import { EmptyState } from '../common/EmptyState';
+import api from '../../services/api';
 
 interface TaskTableProps {
   tasks: TaskItem[];
@@ -18,6 +19,7 @@ interface TaskTableProps {
   onEdit: (task: TaskItem) => void;
   onDelete: (task: TaskItem) => void;
   onSelectTask?: (task: TaskItem) => void;
+  onStatusChange?: (taskId: number, newStatus: TaskStatus) => void;
 }
 
 export const TaskTable: React.FC<TaskTableProps> = ({
@@ -31,30 +33,96 @@ export const TaskTable: React.FC<TaskTableProps> = ({
   onEdit,
   onDelete,
   onSelectTask,
+  onStatusChange,
 }) => {
   const { user } = useAuth();
+  const [updatingId, setUpdatingId] = useState<number | null>(null);
 
-  const renderStatusBadge = (status: TaskStatus) => {
-    switch (status) {
-      case 'TODO':
-        return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-300 dark:border-slate-600">
-            Chưa làm
-          </span>
-        );
-      case 'IN_PROGRESS':
-        return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-300 dark:border-blue-700">
-            Đang làm
-          </span>
-        );
-      case 'COMPLETED':
-        return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-700">
-            Đã hoàn thành
-          </span>
-        );
+  const canModifyTask = (task: TaskItem): boolean => {
+    if (!user) return false;
+    if (user.isAdmin) return true;
+    return task.createdBy === user.id || task.assignees.some((a) => a.userId === user.id);
+  };
+
+  const handleSelectStatus = async (task: TaskItem, newStatus: TaskStatus) => {
+    if (task.status === newStatus) return;
+
+    if (onStatusChange) {
+      onStatusChange(task.id, newStatus);
+      return;
     }
+
+    try {
+      setUpdatingId(task.id);
+      await api.put(`/tasks/${task.id}`, {
+        title: task.title,
+        startTime: task.startTime,
+        endTime: task.endTime,
+        status: newStatus,
+        format: task.format,
+        driveUrl: task.driveUrl,
+        notes: task.notes,
+        submitterName: task.submitterName,
+        assignees: task.assignees.map((a) => ({
+          userId: a.userId || null,
+          otherName: a.userId ? null : a.fullName,
+        })),
+      });
+      task.status = newStatus;
+    } catch (err) {
+      console.error('Không thể cập nhật tiến độ công việc', err);
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
+  const renderStatusDropdown = (task: TaskItem) => {
+    const editable = canModifyTask(task);
+
+    if (!editable) {
+      switch (task.status) {
+        case 'TODO':
+          return (
+            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-300 dark:border-slate-600">
+              Chưa làm
+            </span>
+          );
+        case 'IN_PROGRESS':
+          return (
+            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-300 dark:border-blue-700">
+              Đang làm
+            </span>
+          );
+        case 'COMPLETED':
+          return (
+            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-700">
+              Đã hoàn thành
+            </span>
+          );
+      }
+    }
+
+    const selectStyle =
+      task.status === 'COMPLETED'
+        ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/70 dark:text-emerald-200 border-emerald-300 dark:border-emerald-700'
+        : task.status === 'IN_PROGRESS'
+        ? 'bg-blue-50 text-blue-700 dark:bg-blue-950/70 dark:text-blue-300 border-blue-300 dark:border-blue-700'
+        : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-300 dark:border-slate-600';
+
+    return (
+      <div onClick={(e) => e.stopPropagation()} className="inline-block">
+        <select
+          disabled={updatingId === task.id}
+          value={task.status}
+          onChange={(e) => handleSelectStatus(task, e.target.value as TaskStatus)}
+          className={`text-xs font-semibold px-2 py-1 rounded-md border cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-2xs transition disabled:opacity-50 ${selectStyle}`}
+        >
+          <option value="TODO">Chưa làm</option>
+          <option value="IN_PROGRESS">Đang làm</option>
+          <option value="COMPLETED">Đã hoàn thành</option>
+        </select>
+      </div>
+    );
   };
 
   const renderDeadlineWarning = (endTime: string, status: TaskStatus) => {
@@ -140,12 +208,6 @@ export const TaskTable: React.FC<TaskTableProps> = ({
     };
   };
 
-  const canModifyTask = (task: TaskItem): boolean => {
-    if (!user) return false;
-    if (user.isAdmin) return true;
-    return task.createdBy === user.id || task.assignees.some((a) => a.userId === user.id);
-  };
-
   if (loading) {
     return (
       <div className="border border-slate-200 dark:border-slate-800 rounded-2xl bg-white dark:bg-slate-900 overflow-hidden shadow-sm">
@@ -167,7 +229,7 @@ export const TaskTable: React.FC<TaskTableProps> = ({
 
   return (
     <div className="border border-slate-200 dark:border-slate-800 rounded-2xl bg-white dark:bg-slate-900 overflow-hidden shadow-sm flex flex-col">
-      {/* 1. GIAO DIỆN DI ĐỘNG: Màu nền đỏ, xanh, vàng đồng bộ theo tiến độ */}
+      {/* 1. GIAO DIỆN DI ĐỘNG: Thẻ Card riêng biệt kèm Menu Chọn Tiến Độ Trực Tiếp */}
       <div className="block md:hidden p-3 space-y-3 bg-slate-100/60 dark:bg-slate-950/60">
         {tasks.map((task, index) => {
           const stt = (page - 1) * limit + index + 1;
@@ -190,7 +252,8 @@ export const TaskTable: React.FC<TaskTableProps> = ({
                     {task.title}
                   </h4>
                 </div>
-                <div className="shrink-0">{renderStatusBadge(task.status)}</div>
+                {/* Chọn tiến độ trực tiếp trên mobile */}
+                <div className="shrink-0">{renderStatusDropdown(task)}</div>
               </div>
 
               {/* Thông tin hạn chót & người nộp */}
@@ -285,7 +348,7 @@ export const TaskTable: React.FC<TaskTableProps> = ({
               <th className="py-3 px-4 min-w-[180px] text-left">Bộ phận thực hiện</th>
               <th className="py-3 px-3 min-w-[130px] text-left">Bắt đầu</th>
               <th className="py-3 px-3 min-w-[130px] text-left">Kết thúc</th>
-              <th className="py-3 px-3 text-center min-w-[110px]">Tiến độ</th>
+              <th className="py-3 px-3 text-center min-w-[130px]">Tiến độ</th>
               <th className="py-3 px-3 min-w-[130px] text-left">Ngày hoàn thành</th>
               <th className="py-3 px-3 min-w-[130px] text-left">Người nộp</th>
               <th className="py-3 px-3 text-center min-w-[140px]">Hình thức</th>
@@ -324,8 +387,9 @@ export const TaskTable: React.FC<TaskTableProps> = ({
                     <div>{formatDateTime(task.endTime)}</div>
                     {renderDeadlineWarning(task.endTime, task.status)}
                   </td>
+                  {/* Chọn tiến độ trực tiếp trên desktop */}
                   <td className="py-3 px-3 text-center">
-                    {renderStatusBadge(task.status)}
+                    {renderStatusDropdown(task)}
                   </td>
                   <td className="py-3 px-3 text-left text-xs text-slate-600 dark:text-slate-300">
                     {formatDateTime(task.completedAt)}
